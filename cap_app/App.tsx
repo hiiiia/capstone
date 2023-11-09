@@ -19,15 +19,25 @@ import {
   View,
   Button,
   Image,
+  TextInput,
+  TouchableHighlight,
+  Alert 
 } from 'react-native';
 import { Camera, CameraPermissionStatus, CameraDevice, PhotoFile, useCameraDevice } from 'react-native-vision-camera';
 
 const App = () => {
   const device = useCameraDevice('back');
   const camera = useRef<Camera>(null);
+  const [connneting_state, set_connect_state] = useState('None');
   const [camera_state, set_camera_state] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<PhotoFile | null>(null);
 
+
+  const [login_state, set_login_state] = useState(false);
+  const [username, setUsername] = useState(''); // 입력받은 사용자명
+  const [password, setPassword] = useState(''); // 입력받은 비밀번호
+
+  const [server_address, set_server_adderss] = useState('192.168.25.39:5000');
   useEffect(() => {
     async function getPermission() {
       const permission = await Camera.requestCameraPermission();
@@ -46,7 +56,6 @@ const App = () => {
         flash: 'off',
         enableShutterSound: false,
       });
-
       setCapturedPhoto(photo);
 
       // 이미지를 서버로 전송
@@ -80,7 +89,7 @@ const App = () => {
     });
 
     try {
-      const response = await fetch('http://192.168.25.39:5000/upload', {
+      const response = await fetch(`http://${server_address}/upload`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -88,41 +97,139 @@ const App = () => {
         },
       });
 
+      set_connect_state("NNNNN");
       if (response.ok) {
         // 이미지가 성공적으로 서버에 전송됨
         console.log("Send");
+        set_connect_state("send");
       } else {
         // 전송 중에 오류가 발생함
         console.log("Send Error");
+        set_connect_state("Send Error");
+
       }
     } catch (error) {
       console.log(error);
+      set_connect_state(`${error}`);
+
       // 네트워크 오류 등으로 인한 예외 처리
     }
   };
 
+
+  const handleLogin = () => {
+    const userData = {
+      user_id: username,
+      password: password,
+    };
+  
+    fetch(`http://${server_address}/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          // 로그인 성공 시, login_state를 true로 변경하여 화면을 전환
+          Alert.alert('로그인 성공');
+          set_login_state(true);
+        } else {
+          // 로그인 실패 처리 (예: 오류 메시지 표시)
+          Alert.alert('로그인 실패', data.error);
+
+        }
+      })
+      .catch((error) => {
+        // 네트워크 오류 등으로 인한 예외 처리
+        Alert.alert('네트워크 오류:', error);
+      });
+  };
+  
+  const handleSignup = () => {
+    const userData = {
+      user_id: username,
+      password: password,
+    };
+  
+    fetch(`http://${server_address}/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          // 로그인 성공 시, login_state를 true로 변경하여 화면을 전환
+          Alert.alert('가입 성공');
+        } else {
+          // 로그인 실패 처리 (예: 오류 메시지 표시)
+          Alert.alert('가입 실패', data.error);
+
+        }
+      })
+      .catch((error) => {
+        // 네트워크 오류 등으로 인한 예외 처리
+        Alert.alert('네트워크 오류:', error);
+      });
+  };
+
   return (
     <View style={styles.container}>
-      <Camera
-        ref={camera}
-        style={styles.absoluteFill}
-        device={device as CameraDevice}
-        isActive={true}
-        photo={true}
-      />
-      <Text style={styles.sectionTitle}>state: {camera_state}</Text>
-
-      {/* 사진을 캡처하는 버튼 */}
-      <Button title="Capture Photo" onPress={capturePhoto} />
-
-      {/* 캡처된 사진 표시 */}
-      {capturedPhoto && (
-        <View>
-          <Image source={{ uri: `file://${capturedPhoto.path}` }} style={styles.capturedImage} />
-          <Text>Photo: {capturedPhoto.path}</Text>
-        </View>
-      )}
-    </View>
+    {!login_state ? (
+      // 로그인 창
+      <View style={styles.loginContainer}>
+  <TextInput
+    style={styles.login_input}
+    placeholder="Username"
+    value={username}
+    onChangeText={(text) => setUsername(text)}
+  />
+  <TextInput
+    style={styles.login_input}
+    placeholder="Password"
+    secureTextEntry
+    value={password}
+    onChangeText={(text) => setPassword(text)}
+  />
+  <TouchableHighlight
+    style={styles.login_summit_button}
+    onPress={handleLogin}
+  >
+    <Text style={styles.login_summit_button_text}>Login</Text>
+  </TouchableHighlight>
+  <TouchableHighlight
+    style={styles.signup_button}
+    onPress={handleSignup}
+  >
+    <Text style={styles.signup_button_text}>Sign Up</Text>
+  </TouchableHighlight>
+</View>
+    ) : (
+      // 카메라 및 기타 UI 요소
+      <>
+        <Camera
+          ref={camera}
+          style={styles.absoluteFill}
+          device={device as CameraDevice}
+          isActive={true}
+          photo={true}
+        />
+        <Text style={styles.sectionTitle}>state: {camera_state}</Text>
+        <Button title="Capture Photo" onPress={capturePhoto} />
+        <Text>Server connect : {`${connneting_state}`} Login ID : {`${username}`}</Text>
+        {capturedPhoto && (
+          <View>
+            <Image source={{ uri: `file://${capturedPhoto.path}` }} style={styles.capturedImage} />
+          </View>
+        )}
+      </>
+    )}
+  </View>
   );
 };
 
@@ -150,6 +257,42 @@ const styles = StyleSheet.create({
     color: 'red',
     position: 'absolute',
     top: 10,
+  },
+
+  loginContainer: {
+    zIndex : 3,
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  login_input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  login_summit_button: {
+    backgroundColor: 'blue',
+    color: 'white',
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  login_summit_button_text: {
+    color: 'white',
+    fontSize: 18,
+  },
+
+  signup_button: {
+    backgroundColor: 'lightgray',
+    color: 'white',
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signup_button_text: {
+    color: 'white',
+    fontSize: 18,
   },
 });
 
