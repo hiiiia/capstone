@@ -1,0 +1,6 @@
+
+cd android
+./gradlew assembleRelease
+
+android\app\build\outputs\apk\debug 
+app-debug.apk 확인
