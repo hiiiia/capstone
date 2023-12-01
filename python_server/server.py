@@ -1,6 +1,11 @@
 from flask import Flask, request, jsonify
 import os
 import mysql.connector
+from tensorflow import keras
+from keras.applications.inception_v3 import preprocess_input
+from PIL import Image
+import numpy as np
+
 
 global user_id_pk
 
@@ -126,6 +131,13 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+PREDICT_FOLDER = 'predict'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.config['PREDICT_FOLDER'] = PREDICT_FOLDER
+
+
 @app.route('/upload', methods=['POST'])
 def upload_image():
     print(user_id_pk)
@@ -144,6 +156,60 @@ def upload_image():
         filename = os.path.join(app.config['UPLOAD_FOLDER']+'\\'+user_id_pk, image.filename)
         image.save(filename)
         return jsonify({'message': 'Image uploaded and saved as ' + filename})
+
+
+@app.route('/predict', methods=['POST'])
+def predict_image():
+    print(user_id_pk)
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image part'})
+
+    image = request.files['image']
+    if image.filename == '':
+        return jsonify({'error': 'No selected file'})
+
+    if image:
+        if not os.path.exists(app.config['PREDICT_FOLDER']+'\\'+user_id_pk):
+            os.makedirs(app.config['PREDICT_FOLDER']+'\\'+user_id_pk)
+            print("Making",user_id_pk)
+        print("None Making",user_id_pk)
+        filename = os.path.join(app.config['PREDICT_FOLDER']+'\\'+user_id_pk, image.filename)
+        image.save(filename)
+        loaded_model = keras.models.load_model("./ml/capstone.h5", compile=False)
+
+        # 이미지를 불러옴
+        #img_path = './ml/data/b.webp'  # 이미지 파일 경로
+        img_path = filename
+        # 이미지 로드
+        img = Image.open(img_path)
+        img = img.resize((64, 64))  # 모델이 원하는 크기로 조정
+        img = np.array(img)
+
+        # 이미지를 모델의 입력 형식에 맞게 전처리
+        img = preprocess_input(img)
+        img = np.expand_dims(img, axis=0)  # 배치 차원을 추가하여 (1, 64, 64, 3) 형태로 만듦
+
+        # 모델에 이미지를 입력으로 전달하여 예측 수행
+        predictions = loaded_model.predict(img)
+
+        # 예측 결과를 해석하고 출력
+        if predictions[0][0] > predictions[0][1]:
+            result = "key"
+        else:
+            result = "wallet"
+
+        print("Predicted class:", result)
+
+        # 'key' 클래스에 대한 확률
+        probability_key = predictions[0][0]
+
+        # 'wallet' 클래스에 대한 확률
+        probability_wallet = predictions[0][1]
+
+        print("Probability for 'key':", probability_key)
+        print("Probability for 'wallet':", probability_wallet)
+        return jsonify({'message': 'Image predict result : ' + result,'result' : result})
+    
 
 @app.route('/login', methods=['POST'])
 def login():

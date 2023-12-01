@@ -37,7 +37,7 @@ const App = () => {
   const [username, setUsername] = useState(''); // 입력받은 사용자명
   const [password, setPassword] = useState(''); // 입력받은 비밀번호
 
-  const [server_address, set_server_adderss] = useState('192.168.25.39:5000');
+  const [server_address, set_server_adderss] = useState('192.168.0.248:5000');
   useEffect(() => {
     async function getPermission() {
       const permission = await Camera.requestCameraPermission();
@@ -64,6 +64,21 @@ const App = () => {
     }
   };
 
+    // 사진 predict 함수
+  const capturePhoto_to_predict = async () => {
+    if (camera.current) {
+      const photo = await camera.current.takePhoto({
+        qualityPrioritization: 'speed',
+        flash: 'off',
+        enableShutterSound: false,
+      });
+      sendImageTopredict(photo);
+
+      // 이미지를 서버로 전송
+      
+      sendImageTopredict(photo);
+    }
+  };
   function getCurrentTimeFormatted() {
     const currentDate = new Date();
   
@@ -115,6 +130,44 @@ const App = () => {
       // 네트워크 오류 등으로 인한 예외 처리
     }
   };
+
+  const sendImageTopredict = async (image: PhotoFile) => {
+    const formData = new FormData();
+    
+    formData.append('image', {
+      uri: `file://${image.path}`,
+      type: 'image/jpeg',
+      name: `${getCurrentTimeFormatted()}.jpg`
+    });
+
+    try {
+      const response = await fetch(`http://${server_address}/predict`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      set_connect_state("NNNNN");
+      if (response.ok) {
+        // 이미지가 성공적으로 서버에 전송됨
+        console.log("Send");
+        const result = await response.json(); // 수정된 부분
+        //console.log(result.message); // 서버에서 받은 데이터 출력
+        console.log(result.result); // 서버에서 받은 데이터 출력
+        set_connect_state("send");
+      } else {
+        // 전송 중에 오류가 발생함
+        console.log("Send Error");
+        set_connect_state("Send Error");
+      }
+    } catch (error) {
+      console.log(error);
+      set_connect_state(`${error}`);
+      // 네트워크 오류 등으로 인한 예외 처리
+    }
+};
 
 
   const handleLogin = () => {
@@ -221,6 +274,7 @@ const App = () => {
         />
         <Text style={styles.sectionTitle}>state: {camera_state}</Text>
         <Button title="Capture Photo" onPress={capturePhoto} />
+        <Button title="Capture Photo predict" onPress={capturePhoto_to_predict} />
         <Text>Server connect : {`${connneting_state}`} Login ID : {`${username}`}</Text>
         {capturedPhoto && (
           <View>
