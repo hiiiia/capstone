@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import os
 import mysql.connector
+import subprocess
 from tensorflow import keras
 from keras.applications.inception_v3 import preprocess_input
 from PIL import Image
@@ -120,7 +121,63 @@ def authenticate_user(user_id, user_password):
             connection.close()       
             
             
-        
+def map_id_insert(user_id,map_name):
+    # MySQL 서버 정보
+    try:
+        # MySQL 데이터베이스에 연결
+        connection = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+
+        if connection.is_connected():
+            print("MySQL 데이터베이스에 연결되었습니다.")
+
+            # MySQL 커서 생성
+            cursor = connection.cursor()
+
+            table_name = "user_maps"
+            print(user_id, map_name)
+            # 중복 확인을 위해 사용자 ID 검색
+            query = f"SELECT user_name FROM {table_name} WHERE user_name = %s"
+            values = (user_id,)
+            cursor.execute(query, values)
+            existing_user = cursor.fetchone()
+
+            if existing_user:
+                # 기존 Map 이름 업데이트
+                #print("이미 존재하는 사용자 ID입니다.")
+                query = f"UPDATE {table_name} SET map_id = %s WHERE user_name = %s;"
+                values = (map_name, user_id)
+                cursor.execute(query, values)
+                connection.commit()
+                print("사용자 정보가 성공적으로 업데이트 되었습니다.")
+
+                return True
+            
+            # 사용자 정보 삽입
+            else :
+                #  사용자 이름, Map 이름 추가
+                query = f"INSERT INTO {table_name} (user_name, map_id) VALUES (%s, %s)"
+                values = (user_id, map_name)
+                cursor.execute(query, values)
+                connection.commit()
+                print("사용자 정보가 성공적으로 삽입되었습니다.")
+                return True
+
+    except Exception as e:
+        print(f"MySQL 연결 또는 쿼리 오류: {e}")
+        return False
+
+    finally:
+        # 연결과 커서 닫기
+        if 'connection' in locals() and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL 연결이 닫혔습니다.")
+
 
 app = Flask(__name__)
 
@@ -155,6 +212,17 @@ def upload_image():
         print("None Making",user_id_pk)
         filename = os.path.join(app.config['UPLOAD_FOLDER']+'\\'+user_id_pk, image.filename)
         image.save(filename)
+
+        # 명령어 실행
+        result = subprocess.run(["pwd", "-P"], capture_output=True, text=True)
+
+        # 결과 출력
+        print("Return Code:", result.returncode)
+        print("Standard Output:", result.stdout)
+        print("Standard Error:", result.stderr)
+        map_id = "test_1"
+        map_id_insert(str(user_id_pk),str(map_id))
+
         return jsonify({'message': 'Image uploaded and saved as ' + filename})
 
 
