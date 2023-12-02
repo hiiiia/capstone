@@ -141,7 +141,7 @@ def map_id_insert(user_id,map_name):
             table_name = "user_maps"
             print(user_id, map_name)
             # 중복 확인을 위해 사용자 ID 검색
-            query = f"SELECT user_name FROM {table_name} WHERE user_name = %s"
+            query = f"SELECT user_name,map_id FROM {table_name} WHERE user_name = %s"
             values = (user_id,)
             cursor.execute(query, values)
             existing_user = cursor.fetchone()
@@ -149,6 +149,25 @@ def map_id_insert(user_id,map_name):
             if existing_user:
                 # 기존 Map 이름 업데이트
                 #print("이미 존재하는 사용자 ID입니다.")
+                _, before_map_id = existing_user
+                print(f"User Name: {user_id}, Map ID: {before_map_id}")
+
+                query = f"DROP TABLE IF EXISTS {before_map_id};"
+                cursor.execute(query)
+                connection.commit()
+
+                query = f"""
+                    CREATE TABLE IF NOT EXISTS {map_name} (
+                        number SERIAL PRIMARY KEY,
+                        x FLOAT,
+                        y FLOAT,
+                        z FLOAT,
+                        label VARCHAR(45)
+                    );
+                """
+                cursor.execute(query)
+                connection.commit()
+
                 query = f"UPDATE {table_name} SET map_id = %s WHERE user_name = %s;"
                 values = (map_name, user_id)
                 cursor.execute(query, values)
@@ -164,7 +183,19 @@ def map_id_insert(user_id,map_name):
                 values = (user_id, map_name)
                 cursor.execute(query, values)
                 connection.commit()
-                print("사용자 정보가 성공적으로 삽입되었습니다.")
+
+                query = f"""
+                    CREATE TABLE IF NOT EXISTS {map_name} (
+                        number SERIAL PRIMARY KEY,
+                        x FLOAT,
+                        y FLOAT,
+                        z FLOAT,
+                        label VARCHAR(45)
+                    );
+                """
+                cursor.execute(query)
+                connection.commit()
+                print("Map tabel 생성")
                 return True
 
     except Exception as e:
@@ -178,6 +209,61 @@ def map_id_insert(user_id,map_name):
             connection.close()
             print("MySQL 연결이 닫혔습니다.")
 
+            
+def predcit_map_location(user_id,pos_x,pos_y,pos_z,label):
+    # MySQL 서버 정보
+    try:
+        # MySQL 데이터베이스에 연결
+        connection = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+
+        if connection.is_connected():
+            print("MySQL 데이터베이스에 연결되었습니다.")
+
+            # MySQL 커서 생성
+            cursor = connection.cursor()
+
+            table_name = "user_maps"
+            # 중복 확인을 위해 사용자 ID 검색
+            query = f"SELECT user_name,map_id FROM {table_name} WHERE user_name = %s"
+            values = (user_id,)
+            cursor.execute(query, values)
+            existing_user = cursor.fetchone()
+
+            if existing_user:
+                _, exist_map_id = existing_user
+                print(f"User Name: {user_id}, Map ID: {exist_map_id}")
+
+                query = f"""
+                    INSERT INTO {exist_map_id} (x, y, z, label)
+                    VALUES (%s, %s, %s, %s);
+                """
+                values = (pos_x, pos_y,pos_z,label)
+                cursor.execute(query, values)
+                connection.commit()
+                print("맵에 위치가 기록되었습니다.")
+
+                return True
+            
+            # 사용자 정보 삽입
+            else :
+                print("Map이 존재하지 않습니다")
+                return False
+
+    except Exception as e:
+        print(f"MySQL 연결 또는 쿼리 오류: {e}")
+        return False
+
+    finally:
+        # 연결과 커서 닫기
+        if 'connection' in locals() and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL 연결이 닫혔습니다.")
 
 app = Flask(__name__)
 
@@ -276,6 +362,22 @@ def predict_image():
 
         print("Probability for 'key':", probability_key)
         print("Probability for 'wallet':", probability_wallet)
+
+
+        process_result = subprocess.run(["pwd", "-P"], capture_output=True, text=True)
+
+        # 결과 출력
+        print("Return Code:", process_result.returncode)
+        print("Standard Output:", process_result.stdout)
+        print("Standard Error:", process_result.stderr)
+
+        position_x = "11"
+        position_y = "12"
+        position_z = "13"
+
+        predcit_map_location(str(user_id_pk),position_x,position_y,position_z,result)
+
+
         return jsonify({'message': 'Image predict result : ' + result,'result' : result})
     
 

@@ -56,7 +56,6 @@ const App = () => {
         flash: 'off',
         enableShutterSound: false,
       });
-      setCapturedPhoto(photo);
 
       // 이미지를 서버로 전송
       
@@ -72,7 +71,6 @@ const App = () => {
         flash: 'off',
         enableShutterSound: false,
       });
-      sendImageTopredict(photo);
 
       // 이미지를 서버로 전송
       
