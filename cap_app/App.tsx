@@ -315,12 +315,15 @@ const App = () => {
           <TextInput
             style={styles.login_input}
             placeholder="Username"
+            placeholderTextColor="gray"
+
             value={username}
             onChangeText={(text) => setUsername(text)}
           />
           <TextInput
             style={styles.login_input}
             placeholder="Password"
+            placeholderTextColor="gray"
             secureTextEntry
             value={password}
             onChangeText={(text) => setPassword(text)}
@@ -360,6 +363,7 @@ const App = () => {
               <TextInput
                 style={styles.modalInput}
                 placeholder="192.168.0.248:5000"
+                placeholderTextColor="gray"
                 value={inputServerAddress}
                 onChangeText={(text) => setInputServerAddress(text)}
               />
@@ -429,11 +433,13 @@ const styles = StyleSheet.create({
   },
 
   loginContainer: {
+    color : 'black',
     zIndex: 3,
     marginTop: 20,
     paddingHorizontal: 20,
   },
   login_input: {
+    color : 'black',
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
@@ -460,7 +466,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   signup_button_text: {
-    color: 'white',
+    color: 'black',
     fontSize: 18,
   },
 
@@ -473,10 +479,12 @@ const styles = StyleSheet.create({
     // Styles for the "Update Server" button
   },
   updateServerButtonText: {
-    color: 'white',
+    color: 'black',
     // Styles for the text inside the "Update Server" button
   },
   modalContainer: {
+    color : 'black',
+
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -484,6 +492,8 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     // Styles for the text input inside the modal
+    color : 'black',
+
     borderColor: 'gray',
     borderWidth: 1,
     padding: 10,
