@@ -11,8 +11,8 @@ import numpy as np
 global user_id_pk
 
 host = "localhost"
-user = "yong"
-password = "0406"
+user = "root"
+password = "root"
 database = "capstone_s"
 table_name = "users"
 
