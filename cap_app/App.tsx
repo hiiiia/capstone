@@ -21,7 +21,8 @@ import {
   Image,
   TextInput,
   TouchableHighlight,
-  Alert
+  Alert,
+  Modal
 } from 'react-native';
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 import { Camera, CameraPermissionStatus, CameraDevice, PhotoFile, useCameraDevice, VideoFile } from 'react-native-vision-camera';
@@ -38,7 +39,15 @@ const App = () => {
   const [username, setUsername] = useState(''); // 입력받은 사용자명
   const [password, setPassword] = useState(''); // 입력받은 비밀번호
 
-  const [server_address, set_server_adderss] = useState('192.168.0.248:5000');
+  const [server_address, set_server_address] = useState('192.168.0.248:5000');
+  const [inputServerAddress, setInputServerAddress] = useState('');
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  
+  const handleUpdateServerAddress = () => {
+    set_server_address(inputServerAddress);
+    setIsModalVisible(false);
+  };
+
   useEffect(() => {
     async function getPermission() {
       const permission = await Camera.requestCameraPermission();
@@ -328,7 +337,43 @@ const App = () => {
           >
             <Text style={styles.signup_button_text}>Sign Up</Text>
           </TouchableHighlight>
+          
+
+          <View>
+            <TouchableHighlight
+              style={styles.updateServerButton}
+              onPress={() => setIsModalVisible(true)}
+              disabled={login_state}
+            >
+              <Text style={styles.updateServerButtonText}>Update Server</Text>
+            </TouchableHighlight>
+          </View>
+
+          {/* Modal for updating the server address */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isModalVisible}
+            onRequestClose={() => setIsModalVisible(false)}
+          >
+            <View style={styles.modalContainer}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="192.168.0.248:5000"
+                value={inputServerAddress}
+                onChangeText={(text) => setInputServerAddress(text)}
+              />
+              <Button title="Update" onPress={handleUpdateServerAddress} />
+              <Button
+                title="Cancel"
+                onPress={() => setIsModalVisible(false)}
+              />
+            </View>
+          </Modal>
+
         </View>
+
+        
       ) : (
         // 카메라 및 기타 UI 요소
         <>
@@ -417,6 +462,32 @@ const styles = StyleSheet.create({
   signup_button_text: {
     color: 'white',
     fontSize: 18,
+  },
+
+  updateServerButton: {
+    backgroundColor : "gray",
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    padding: 10,
+    // Styles for the "Update Server" button
+  },
+  updateServerButtonText: {
+    color: 'white',
+    // Styles for the text inside the "Update Server" button
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // Styles for the modal container
+  },
+  modalInput: {
+    // Styles for the text input inside the modal
+    borderColor: 'gray',
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 10,
   },
 });
 
