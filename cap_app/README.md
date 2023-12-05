@@ -20,7 +20,7 @@ cap_app\android\app\build\outputs\apk
 전환이 완료가 되면, 옵션에 개발자 옵션이 생긴다. 이때, usb 디버깅을 꼭 켜줘야한다.
 
 
-이제 안드로이드 Sdk 폴더에서 platform-tools 를 찾아내서 터미널에서 이 폴더로 들어가준다.
+<!--이제 안드로이드 Sdk 폴더에서 platform-tools 를 찾아내서 터미널에서 이 폴더로 들어가준다.-->
 
 
 adb devices 명령어를 사용하면 디바이스가 검색된 것을 알 수 있다.
