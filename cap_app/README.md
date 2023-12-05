@@ -12,7 +12,7 @@ cap_app\android\app\build\outputs\apk
 ./gradlew assembleDebug
 
 
----> 해당 내용으로 release하면 안됌.
+---> 해당 내용으로 release하면 안됌. 아래 내용대로 할것
 
 실제기기 연결
 설정 -> 휴대전화 정보 -> 소프트웨어 정보 -> 빌드 번호 (여러번 클릭하면) 개발자 모드로 전환이된다.
