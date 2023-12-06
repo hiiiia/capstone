@@ -74,11 +74,31 @@ const App = () => {
     }
   };
 
+      // 비디오 녹화
+      const recode_predict_video = async () => {
+        if (camera.current) {
+          try {
+            camera.current.startRecording({
+              //videoCodec: 'h265',
+              //videoBitRate: 'high',
+              onRecordingFinished: (video) => { send_predict_VideoToServer(video) },
+              onRecordingError: (error) => console.error(error),
+            });
+          } catch (error) {
+            console.error("Error starting video recording:", error);
+          }
+        }
+      };
+  
+      
   const stop_recodevideo = async () => {
     if (camera.current) {
       const video = await camera.current.stopRecording();
     }
   };
+
+
+
 
   // 사진 캡처 함수
   const capturePhoto = async () => {
@@ -169,6 +189,51 @@ const App = () => {
       }
     };
 
+        // 비디오 서버로 전송하는 함수
+        const send_predict_VideoToServer = async (video: VideoFile) => {
+          const path = video.path;
+        
+          try {
+            //console.log(`${path}`);
+            // Save the video file using CameraRoll
+            await CameraRoll.save(`file://${path}`, {
+              type: 'video',
+            });
+        
+            const formData = new FormData();
+        
+            // Append the video file to the formData
+            formData.append('video', {
+              uri: `file://${path}`,
+              type: 'video/mp4',  // Adjust the type based on your video file format
+              name: `${getCurrentTimeFormatted()}.mp4`,  // Adjust the extension based on your video file format
+            });
+        
+            const response = await fetch(`http://${server_address}/predict`, {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+        
+            set_connect_state("NNNNN");
+        
+            if (response.ok) {
+              // Video successfully sent to the server
+              console.log("Send");
+              set_connect_state("send");
+            } else {
+              // Error occurred during the transmission
+              console.log("Send Error");
+              set_connect_state("Send Error");
+            }
+          } catch (error) {
+            console.log(error);
+            set_connect_state(`${error}`);
+            // Network error or other exceptions
+          }
+        };
   // 이미지를 서버로 전송하는 함수
   const sendImageToServer = async (image: PhotoFile) => {
     const formData = new FormData();
@@ -391,9 +456,10 @@ const App = () => {
           />
           <Text style={styles.sectionTitle}>state: {camera_state}</Text>
           <Button title="Recode Video" onPress={recodevideo} />
-          <Button title="Stop Recode Video" onPress={stop_recodevideo} />
-          <Button title="Capture Photo" onPress={capturePhoto} />
-          <Button title="Capture Photo predict" onPress={capturePhoto_to_predict} />
+          <Button title="Recode Predict Video" onPress={recode_predict_video} />
+          <Button title="Stop Recode Video" onPress={stop_recodevideo} color={'lightcoral'} />
+          {/* <Button title="Capture Photo" onPress={capturePhoto} />
+          <Button title="Capture Photo predict" onPress={capturePhoto_to_predict} /> */}
           <Text>Server connect : {`${connneting_state}`} Login ID : {`${username}`}</Text>
           {capturedPhoto && (
             <View>
