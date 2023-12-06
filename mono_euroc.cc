@@ -138,8 +138,22 @@ int main(int argc, char **argv)
 
             // Pass the image to the SLAM system
             // cout << "tframe = " << tframe << endl;
-            SLAM.TrackMonocular(im,tframe); // TODO change to monocular_inertial
+           // SLAM.TrackMonocular(im,tframe); // TODO change to monocular_inertial
+		// Pass the image to the SLAM system
+// TrackMonocular 함수 호출
 
+    Sophus::SE3f sophusPose = SLAM.TrackMonocular(im, tframe);
+
+    // Sophus::SE3f에서 변환 벡터 추출
+    Eigen::Vector3f translationVector = sophusPose.translation();
+    if (!(translationVector.x() > -1 && translationVector.x() < 1 &&
+      translationVector.y() > -1 && translationVector.y() < 1 &&
+      translationVector.z() > -1 && translationVector.z() < 1))  {
+        // X, Y, Z 위치 출력
+        std::cout << "Camera Position: X = " << translationVector.x() 
+                  << ", Y = " << translationVector.y() 
+                  << ", Z = " << translationVector.z() << std::endl;
+}
     #ifdef COMPILEDWITHC11
             std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
     #else
@@ -227,3 +241,4 @@ void LoadImages(const string &strImagePath, const string &strPathTimes,
         }
     }
 }
+
