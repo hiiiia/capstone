@@ -719,9 +719,10 @@ def predict_image():
 
 
         predcit_map_location(str(user_id_pk),x_position,y_position,z_position,result)
+        output = result.stdout.decode('utf-8') if result.stdout else "No output"
 
 
-        return jsonify({'message': 'Image predict result : ' + result,'result' : result})
+        return jsonify({'message': 'Image predict result : ' + output, 'result': output})
     
 # @app.route('/predict', methods=['POST'])
 # def predict_image():
