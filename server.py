@@ -463,7 +463,7 @@ def upload_video():
             file_contents = output_file_handle.read()
 
             # Use regular expressions to extract values
-            match = re.search(r"Position: x = (\S+), y = (\S+), z = (\S+)", file_contents)
+            match = re.search(r"Camera Position: X = (\S+), Y = (\S+), Z = (\S+)", file_contents)
 
             # Check if the pattern was found
             if match:
@@ -484,9 +484,10 @@ def upload_video():
         # =====================================================
         # =====================================================
         # =====================================================
+        # ===============================================s======
         # =====================================================
-        # =====================================================
-        map_id = video_name
+       
+        map_id = re.sub(r'[.]','',video_name)
         map_id_insert(str(user_id_pk), str(map_id))
 
         return jsonify({'message': 'Video uploaded and saved as ' + filename})
@@ -621,7 +622,7 @@ def predict_image():
         img_path = f'{output_dir}/ml.png'
         # 이미지 로드
         img = Image.open(img_path)
-        img = img.resize((64, 64))  # 모델이 원하는 크기로 조정
+        img = img.resize((75, 75))  # 모델이 원하는 크기로 조정
         img = np.array(img)
 
         # 이미지를 모델의 입력 형식에 맞게 전처리
@@ -631,22 +632,16 @@ def predict_image():
         # 모델에 이미지를 입력으로 전달하여 예측 수행
         predictions = loaded_model.predict(img)
 
-        # 예측 결과를 해석하고 출력
-        if predictions[0][0] > predictions[0][1]:
-            result = "key"
-        else:
-            result = "wallet"
+        class_names = ["key", "wallet", "backpack", "laptop"]  # Replace with your actual class names
 
-        print("Predicted class:", result)
+        predicted_class_index = np.argmax(predictions)
+        predicted_class = class_names[predicted_class_index]
 
-        # 'key' 클래스에 대한 확률
-        probability_key = predictions[0][0]
+        print("Predicted class:", predicted_class)
 
-        # 'wallet' 클래스에 대한 확률
-        probability_wallet = predictions[0][1]
-
-        print("Probability for 'key':", probability_key)
-        print("Probability for 'wallet':", probability_wallet)
+# Display probabilities for all classes
+        for i, class_name in enumerate(class_names):
+            print(f"Probability for '{class_name}': {predictions[0][i]}")
 
         system_t_path = "/home/wodbs/Dev/ORB_SLAM3/src/System_t.cc"
        # 파일이 존재하면 실행
@@ -672,11 +667,11 @@ def predict_image():
         output_file = "out_result.txt"
         os.chdir(original_dir)
 
-        # subprocess.run을 사용하여 명령을 foreground에서 실행하고 결과를 파일로 저장합니다.
+        # subprocess.run을 사용하여 명령을 foreground에서 실행하고 결과를 파일로 저장합니다.-------------------------------------------------------------------------q
         try:
             with open(output_file, "w") as output_file_handle:
-                result = subprocess.run(command, check=True, stdout=output_file_handle, stderr=subprocess.PIPE, text=True)
-                print("프로세스 종료 코드:", result.returncode)
+                result_process = subprocess.run(command, check=True, stdout=output_file_handle, stderr=subprocess.PIPE, text=True)
+                print("프로세스 종료 코드:", result_process.returncode)
         except subprocess.CalledProcessError as e:
             print("오류 발생. 종료 코드:", e.returncode)
             print("표준 에러:\n", e.stderr)
@@ -714,15 +709,11 @@ def predict_image():
         # =====================================================
         # =====================================================
         # =====================================================
-        map_id = video_name
-        map_id_insert(str(user_id_pk), str(map_id))
+
+        predcit_map_location(str(user_id_pk),x_position,y_position,z_position,predicted_class)
 
 
-        predcit_map_location(str(user_id_pk),x_position,y_position,z_position,result)
-        output = result.stdout.decode('utf-8') if result.stdout else "No output"
-
-
-        return jsonify({'message': 'Image predict result : ' + output, 'result': output})
+        return jsonify({'message': 'Image predict result : ' + predicted_class, 'result': str(x_position)+str(y_position)+str(z_position)})
     
 # @app.route('/predict', methods=['POST'])
 # def predict_image():

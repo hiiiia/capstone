@@ -39,7 +39,7 @@ const App = () => {
   const [username, setUsername] = useState(''); // 입력받은 사용자명
   const [password, setPassword] = useState(''); // 입력받은 비밀번호
 
-  const [server_address, set_server_address] = useState('192.168.0.248:5000');
+  const [server_address, set_server_address] = useState('192.168.4.70:5000');
   const [inputServerAddress, setInputServerAddress] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
   
@@ -427,7 +427,7 @@ const App = () => {
             <View style={styles.modalContainer}>
               <TextInput
                 style={styles.modalInput}
-                placeholder="192.168.0.248:5000"
+                placeholder="192.168.4.31:5000"
                 placeholderTextColor="gray"
                 value={inputServerAddress}
                 onChangeText={(text) => setInputServerAddress(text)}
