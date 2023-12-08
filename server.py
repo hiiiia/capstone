@@ -439,11 +439,12 @@ def upload_video():
         str(output_dir + "/timestamps.txt"),
         str(video_name)
 ]
+        os.chdir(original_dir)
 
 
         # 결과를 저장할 파일
         output_file = "out_result.txt"
-        os.chdir(original_dir)
+
         # subprocess.run을 사용하여 명령을 foreground에서 실행하고 결과를 파일로 저장합니다.
         try:
             with open(output_file, "w") as output_file_handle:
@@ -453,14 +454,17 @@ def upload_video():
             print("오류 발생. 종료 코드:", e.returncode)
             print("표준 에러:\n", e.stderr)
 
-
+       # output_file_handle.close()
         x_position = 0
         y_position = 0
         z_position = 0
+        
         # Open the file for reading
         with open(output_file, "r") as output_file_handle:
             # Read the entire contents of the file
             file_contents = output_file_handle.read()
+            #print(file_contents)
+
 
             # Use regular expressions to extract values
             match = re.search(r"Camera Position: X = (\S+), Y = (\S+), Z = (\S+)", file_contents)
@@ -684,9 +688,8 @@ def predict_image():
         with open(output_file, "r") as output_file_handle:
             # Read the entire contents of the file
             file_contents = output_file_handle.read()
-
             # Use regular expressions to extract values
-            match = re.search(r"Position: x = (\S+), y = (\S+), z = (\S+)", file_contents)
+            match = re.search(r"Camera Position: X = (\S+), Y = (\S+), Z = (\S+)", file_contents)
 
             # Check if the pattern was found
             if match:
