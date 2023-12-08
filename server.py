@@ -8,7 +8,7 @@ from keras.applications.inception_v3 import preprocess_input
 from PIL import Image
 import numpy as np
 import cv2
-
+import math
 global user_id_pk
 original_dir = os.getcwd()
 
@@ -539,6 +539,36 @@ def upload_video():
             print("오류 발생. 종료 코드:", e.returncode)
             print("표준 에러:\n", e.stderr)
 
+
+
+        with open(output_file, "r") as output_file_handle:
+            file_contents = output_file_handle.read()
+
+
+            # Use regular expressions to extract values
+            match = re.search(r"X_min: (\S+), X-max: (\S+)Z_min: (\S+), Z-max: (\S+)", file_contents)
+
+            # Check if the pattern was found
+            if match:
+                x_min = match.group(1)
+                x_max = match.group(2)
+                z_min = match.group(3)
+                z_max = match.group(4)
+
+                # Print or use the extracted values
+                print(f"Extracted values: x_min = {x_min}, x_max = {x_max}, z_min = {z_min}, z_max = {z_max}")
+            else:
+                print("Pattern not found in the file.")
+        x_cells = int((x_max - x_min) / 0.2) + 2
+        z_cells = int((z_max - z_min) / 0.2) + 2# 0 하나씩 더 넣음 혹시모를 경로 초과 대비
+        
+        grid_map = [[0 for _ in range(x_cells)] for _ in range(z_cells)]
+        
+
+
+
+
+
        # output_file_handle.close()
         x_position = 0
         y_position = 0
@@ -552,22 +582,22 @@ def upload_video():
 
 
             # Use regular expressions to extract values
-            match = re.search(r"Camera Position: X = (\S+), Y = (\S+), Z = (\S+)", file_contents)
+            matches = re.findall(r"Position: X = (\S+), Y = (\S+), Z = (\S+)", file_contents)
 
             # Check if the pattern was found
-            if match:
-                x_value = match.group(1)
-                y_value = match.group(2)
-                z_value = match.group(3)
-
-                x_position = x_value
-                y_position = y_value
-                z_position = z_value
-                # Print or use the extracted values
-                print(f"Extracted values: x = {x_value}, y = {y_value}, z = {z_value}")
-            else:
-                print("Pattern not found in the file.")
-
+            for match in matches:
+                 x_value, y_value, z_value = map(float, match)  # 문자열을 실수로 변환
+                 x_index = int((x_value - x_min) / 0.2)
+                 z_index = int((z_value - z_min) / 0.2)
+                 grid_map[z_index][x_index] = 1
+        # 그리드 맵 출력
+        for row in grid_map:
+            print(row)
+        
+        grid_map_string = '\n'.join([''.join(map(str, row)) for row in grid_map])
+        with open('grid_map.txt', 'w') as file:
+            file.write(f"x_min: {x_min}, z_min: {z_min}\n")
+            file.write(grid_map_string)
 
 
         # =====================================================
@@ -929,13 +959,102 @@ def signup():
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 
+
+import heapq
+
+def heuristic(a, b):
+    """맨해튼 거리를 휴리스틱 함수로 사용"""
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def a_star_search(grid, start, goal):
+    """A* 알고리즘으로 경로 찾기"""
+    neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # 상, 하, 좌, 우 이동
+    close_set = set()
+    came_from = {}
+    gscore = {start: 0}
+    fscore = {start: heuristic(start, goal)}
+    oheap = []
+
+    heapq.heappush(oheap, (fscore[start], start))
+    
+    while oheap:
+        current = heapq.heappop(oheap)[1]
+
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            return path[::-1]
+
+        close_set.add(current)
+        for i, j in neighbors:
+            neighbor = current[0] + i, current[1] + j            
+            tentative_g_score = gscore[current] + heuristic(current, neighbor)
+            if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]):
+                if grid[neighbor[0]][neighbor[1]] != 1:
+                    continue
+            else:
+                continue
+            
+            if neighbor in close_set and tentative_g_score >= gscore.get(neighbor, 0):
+                continue
+            
+            if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1]for i in oheap]:
+                came_from[neighbor] = current
+                gscore[neighbor] = tentative_g_score
+                fscore[neighbor] = tentative_g_score + heuristic(neighbor, goal)
+                heapq.heappush(oheap, (fscore[neighbor], neighbor))
+                
+    return False
+
+# 예시 그리드 맵 (1은 이동 가능한 길)
+
+
+
+
+
+
+
+
 def location():
     with open('grid_map.txt', 'r') as file:
-    lines = file.readlines()
+        mins = file.readline()
+        lines = file.readlines()
     
 # 그리드 맵 변환
     grid_map = [list(map(int, line.strip())) for line in lines]
+    match = re.search(r"x_min: ([\d\.\-]+), z_min: ([\d\.\-]+)", first_line)
 
- 
+    if match:
+        x_min = float(match.group(1))
+        z_min = float(match.group(2))
+        print(f"x_min: {x_min}, z_min: {z_min}")
+    else:
+        print("x_min과 z_min을 찾을 수 없습니다.")
+    #현재 (x 값 -x_min)/0.2 
+    start = (0, 0)  # 출발지 (x, y)
+    goal = (4, 4)   # 도착지 (x, y)
+    path = a_star_search(grid_map, start, goal)
+    
+
+    x_next = path[1][0]*0.2+x_min
+    z_next = path[1][1]*0.2+z_min 
 
 
+    direction_to_next = atan2(z_next - z_current, x_next - x_current)
+
+#추측하고 읽어야함
+    yaw = ...; 
+
+
+    angle_difference = direction_to_next - yaw
+
+    if abs(angle_difference) < math.pi / 4:
+        print("Go East")
+    elif abs(angle_difference) > 3 * math.pi / 4:
+        print("Go West")
+    elif angle_difference > 0:
+        print("Go North")
+    else:
+        print("Go South")
