@@ -10,6 +10,7 @@ import numpy as np
 import cv2
 
 global user_id_pk
+original_dir = os.getcwd()
 
 host = "localhost"
 user = "root"
@@ -266,6 +267,90 @@ def predcit_map_location(user_id,pos_x,pos_y,pos_z,label):
             connection.close()
             print("MySQL 연결이 닫혔습니다.")
 
+
+def get_map_id(user_id):
+    # MySQL 서버 정보
+    try:
+        # MySQL 데이터베이스에 연결
+        connection = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+
+        if connection.is_connected():
+            print("MySQL 데이터베이스에 연결되었습니다.")
+
+            # MySQL 커서 생성
+            cursor = connection.cursor()
+
+            table_name = "user_maps"
+            # 중복 확인을 위해 사용자 ID 검색
+            query = f"SELECT user_name,map_id FROM {table_name} WHERE user_name = %s"
+            values = (user_id,)
+            cursor.execute(query, values)
+            existing_user = cursor.fetchone()
+
+            if existing_user:
+                # Map id find
+                _, before_map_id = existing_user
+                print(f"User Name: {user_id}, Map ID: {before_map_id}")
+
+
+                return True, before_map_id
+            
+            # 사용자 정보 삽입
+            else :
+                return True, "No_Maps"
+
+    except Exception as e:
+        print(f"MySQL 연결 또는 쿼리 오류: {e}")
+        return False
+
+    finally:
+        # 연결과 커서 닫기
+        if 'connection' in locals() and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL 연결이 닫혔습니다.")
+
+
+def get_map_data(user_map_id):
+    # MySQL 서버 정보
+    try:
+        # MySQL 데이터베이스에 연결
+        connection = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+
+        if connection.is_connected():
+            print("MySQL 데이터베이스에 연결되었습니다.")
+
+            # MySQL 커서 생성
+            cursor = connection.cursor()
+
+            # 중복 확인을 위해 사용자 ID 검색
+            query = f"SELECT * FROM {user_map_id}"
+            cursor.execute(query)
+            result = [list(row) for row in cursor.fetchall()]
+
+            return True, result
+
+    except Exception as e:
+        print(f"MySQL 연결 또는 쿼리 오류: {e}")
+        return False, "오류"
+
+    finally:
+        # 연결과 커서 닫기
+        if 'connection' in locals() and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL 연결이 닫혔습니다.")
+
 app = Flask(__name__)
 
 # 이미지를 저장할 디렉토리
@@ -302,11 +387,11 @@ def upload_image():
         return jsonify({'error': 'No selected file'})
 
     if image:
-        if not os.path.exists(app.config['UPLOAD_FOLDER']+'\\'+user_id_pk):
-            os.makedirs(app.config['UPLOAD_FOLDER']+'\\'+user_id_pk)
+        if not os.path.exists(app.config['UPLOAD_FOLDER']+'/'+user_id_pk):
+            os.makedirs(app.config['UPLOAD_FOLDER']+'/'+user_id_pk)
             print("Making",user_id_pk)
         print("None Making",user_id_pk)
-        filename = os.path.join(app.config['UPLOAD_FOLDER']+'\\'+user_id_pk, image.filename)
+        filename = os.path.join(app.config['UPLOAD_FOLDER']+'/'+user_id_pk, image.filename)
         image.save(filename)
 
         # 명령어 실행
@@ -335,16 +420,16 @@ def upload_video():
 
     if video:
         video_name = video.filename
-        if not os.path.exists(app.config['UPLOAD_VIDEO_FOLDER']+'\\'+user_id_pk):
-            os.makedirs(app.config['UPLOAD_VIDEO_FOLDER']+'\\'+user_id_pk)
+        if not os.path.exists(app.config['UPLOAD_VIDEO_FOLDER']+'/'+user_id_pk):
+            os.makedirs(app.config['UPLOAD_VIDEO_FOLDER']+'/'+user_id_pk)
             print("Making",user_id_pk)
         print("None Making",user_id_pk)
 
         filename = os.path.join(app.config['UPLOAD_VIDEO_FOLDER'], user_id_pk, video.filename)
         video.save(filename)
 
-        if not os.path.exists(app.config['UPLOAD_VIDEO_FOLDER']+'\\'+user_id_pk+'\\'+"frames"):
-            os.makedirs(app.config['UPLOAD_VIDEO_FOLDER']+'\\'+user_id_pk+'\\'+"frames")
+        if not os.path.exists(app.config['UPLOAD_VIDEO_FOLDER']+'/'+user_id_pk+'/'+"frames"):
+            os.makedirs(app.config['UPLOAD_VIDEO_FOLDER']+'/'+user_id_pk+'/'+"frames")
         output_dir = os.path.join(app.config['UPLOAD_VIDEO_FOLDER'], user_id_pk,"frames")
 
         # Add your video processing logic here, if needed
@@ -421,18 +506,26 @@ def upload_video():
         # =====================================================
         
         # Command execution
+        system_t_path = "/home/wodbs/Dev/ORB_SLAM3/src/System_t.cc"
+       # 파일이 존재하면 실행
+# 파일이 존재하지 않으면 실행 
+        if not os.path.isfile(system_t_path):
+               subprocess.run(["mv", "/home/wodbs/Dev/ORB_SLAM3/src/System.cc", "/home/wodbs/Dev/ORB_SLAM3/src/System_t.cc"])
+               subprocess.run(["mv", "/home/wodbs/Dev/ORB_SLAM3/src/System1.cc", "/home/wodbs/Dev/ORB_SLAM3/src/System.cc"])
+               os.chdir("/home/wodbs/Dev/ORB_SLAM3/build")
+               subprocess.run(["make"])
+# 실행할 명령을 정의
+
         command = [
-            "./Examples/Monocular/mono_euroc",
-            "./Vocabulary/ORBvoc.txt",
-            "./Examples/Monocular/EuRoC.yaml",
-            # "/home/hello/Desktop/data/frames",
-            str(output_dir),
-            #"/home/hello/Desktop/data/frames/timestamps.txt",
-            str(output_dir+"\\timestamps.txt"),
-            #"test"
-            str(video_name)
-            
-        ]
+        "/home/wodbs/Dev/ORB_SLAM3/Examples/Monocular/mono_euroc",
+        "/home/wodbs/Dev/ORB_SLAM3/Vocabulary/ORBvoc.txt",
+        "/home/wodbs/Dev/ORB_SLAM3/Examples/Monocular/test.yaml",
+        str(output_dir),
+        str(output_dir + "/timestamps.txt"),
+        str(video_name)
+]
+        os.chdir(original_dir)
+
 
         # 결과를 저장할 파일
         output_file = "out_result.txt"
@@ -446,17 +539,20 @@ def upload_video():
             print("오류 발생. 종료 코드:", e.returncode)
             print("표준 에러:\n", e.stderr)
 
-
+       # output_file_handle.close()
         x_position = 0
         y_position = 0
         z_position = 0
+        
         # Open the file for reading
         with open(output_file, "r") as output_file_handle:
             # Read the entire contents of the file
             file_contents = output_file_handle.read()
+            #print(file_contents)
+
 
             # Use regular expressions to extract values
-            match = re.search(r"Position: x = (\S+), y = (\S+), z = (\S+)", file_contents)
+            match = re.search(r"Camera Position: X = (\S+), Y = (\S+), Z = (\S+)", file_contents)
 
             # Check if the pattern was found
             if match:
@@ -477,9 +573,9 @@ def upload_video():
         # =====================================================
         # =====================================================
         # =====================================================
+        # ===============================================s======
         # =====================================================
-        # =====================================================
-        map_id = video_name
+        map_id = re.sub(r'[.]','',video_name)
         map_id_insert(str(user_id_pk), str(map_id))
 
         return jsonify({'message': 'Video uploaded and saved as ' + filename})
@@ -498,16 +594,16 @@ def predict_image():
 
     if video:
         video_name = video.filename
-        if not os.path.exists(app.config['PREDICT_FOLDER']+'\\'+user_id_pk):
-            os.makedirs(app.config['PREDICT_FOLDER']+'\\'+user_id_pk)
+        if not os.path.exists(app.config['PREDICT_FOLDER']+'/'+user_id_pk):
+            os.makedirs(app.config['PREDICT_FOLDER']+'/'+user_id_pk)
             print("Making",user_id_pk)
         print("None Making",user_id_pk)
 
         filename = os.path.join(app.config['PREDICT_FOLDER'], user_id_pk, video.filename)
         video.save(filename)
 
-        if not os.path.exists(app.config['PREDICT_FOLDER']+'\\'+user_id_pk+'\\'+"frames"):
-            os.makedirs(app.config['PREDICT_FOLDER']+'\\'+user_id_pk+'\\'+"frames")
+        if not os.path.exists(app.config['PREDICT_FOLDER']+'/'+user_id_pk+'/'+"frames"):
+            os.makedirs(app.config['PREDICT_FOLDER']+'/'+user_id_pk+'/'+"frames")
         output_dir = os.path.join(app.config['PREDICT_FOLDER'], user_id_pk,"frames")
 
         # Add your video processing logic here, if needed
@@ -607,14 +703,14 @@ def predict_image():
 
         # Release the video file
         video.release()
-        loaded_model = keras.models.load_model("./ml/capstone.h5", compile=False)
+        loaded_model = keras.models.load_model("/home/wodbs/caps/ml/capstone.h5", compile=False)
 
         # 이미지를 불러옴
         #img_path = './ml/data/b.webp'  # 이미지 파일 경로
         img_path = f'{output_dir}/ml.png'
         # 이미지 로드
         img = Image.open(img_path)
-        img = img.resize((64, 64))  # 모델이 원하는 크기로 조정
+        img = img.resize((75, 75))  # 모델이 원하는 크기로 조정
         img = np.array(img)
 
         # 이미지를 모델의 입력 형식에 맞게 전처리
@@ -624,47 +720,49 @@ def predict_image():
         # 모델에 이미지를 입력으로 전달하여 예측 수행
         predictions = loaded_model.predict(img)
 
-        # 예측 결과를 해석하고 출력
-        if predictions[0][0] > predictions[0][1]:
-            result = "key"
-        else:
-            result = "wallet"
+        class_names = ["key", "wallet", "backpack", "laptop"]  # Replace with your actual class names
 
-        print("Predicted class:", result)
+        predicted_class_index = np.argmax(predictions)
+        predicted_class = class_names[predicted_class_index]
 
-        # 'key' 클래스에 대한 확률
-        probability_key = predictions[0][0]
+        print("Predicted class:", predicted_class)
 
-        # 'wallet' 클래스에 대한 확률
-        probability_wallet = predictions[0][1]
-
-        print("Probability for 'key':", probability_key)
-        print("Probability for 'wallet':", probability_wallet)
-
-
-
-        # Command execution
-        command = [
-            "./Examples/Monocular/mono_euroc",
-            "./Vocabulary/ORBvoc.txt",
-            "./Examples/Monocular/EuRoC.yaml",
-            # "/home/hello/Desktop/data/frames",
-            str(output_dir),
-            #"/home/hello/Desktop/data/frames/timestamps.txt",
-            str(output_dir+"\\timestamps.txt"),
-            #"test"
-            str(video_name)
+# Display probabilities for all classes
+        for i, class_name in enumerate(class_names):
+            print(f"Probability for '{class_name}': {predictions[0][i]}")
             
-        ]
+
+
+
+        system_t_path = "/home/wodbs/Dev/ORB_SLAM3/src/System_t.cc"
+       # 파일이 존재하면 실행
+# 파일이 존재하지 않으면 실행 
+        if  os.path.isfile(system_t_path):
+                subprocess.run(["mv", "/home/wodbs/Dev/ORB_SLAM3/src/System.cc", "/home/wodbs/Dev/ORB_SLAM3/src/System1.cc"])
+                subprocess.run(["mv", "/home/wodbs/Dev/ORB_SLAM3/src/System_t.cc", "/home/wodbs/Dev/ORB_SLAM3/src/System.cc"])
+                os.chdir("/home/wodbs/Dev/ORB_SLAM3/build")
+                subprocess.run(["make"])
+# 실행할 명령을 정의
+        command = [
+        "/home/wodbs/Dev/ORB_SLAM3/Examples/Monocular/mono_euroc",
+        "/home/wodbs/Dev/ORB_SLAM3/Vocabulary/ORBvoc.txt",
+        "/home/wodbs/Dev/ORB_SLAM3/Examples/Monocular/read.yaml",
+        str(output_dir),
+        str(output_dir + "/timestamps.txt"),
+        str(video_name)
+]
+
+
 
         # 결과를 저장할 파일
         output_file = "out_result.txt"
+        os.chdir(original_dir)
 
-        # subprocess.run을 사용하여 명령을 foreground에서 실행하고 결과를 파일로 저장합니다.
+        # subprocess.run을 사용하여 명령을 foreground에서 실행하고 결과를 파일로 저장합니다.-------------------------------------------------------------------------q
         try:
             with open(output_file, "w") as output_file_handle:
-                result = subprocess.run(command, check=True, stdout=output_file_handle, stderr=subprocess.PIPE, text=True)
-                print("프로세스 종료 코드:", result.returncode)
+                result_process = subprocess.run(command, check=True, stdout=output_file_handle, stderr=subprocess.PIPE, text=True)
+                print("프로세스 종료 코드:", result_process.returncode)
         except subprocess.CalledProcessError as e:
             print("오류 발생. 종료 코드:", e.returncode)
             print("표준 에러:\n", e.stderr)
@@ -677,9 +775,8 @@ def predict_image():
         with open(output_file, "r") as output_file_handle:
             # Read the entire contents of the file
             file_contents = output_file_handle.read()
-
             # Use regular expressions to extract values
-            match = re.search(r"Position: x = (\S+), y = (\S+), z = (\S+)", file_contents)
+            match = re.search(r"Camera Position: X = (\S+), Y = (\S+), Z = (\S+)", file_contents)
 
             # Check if the pattern was found
             if match:
@@ -702,14 +799,12 @@ def predict_image():
         # =====================================================
         # =====================================================
         # =====================================================
-        map_id = video_name
-        map_id_insert(str(user_id_pk), str(map_id))
+
+        predcit_map_location(str(user_id_pk),x_position,y_position,z_position,predicted_class)
 
 
-        predcit_map_location(str(user_id_pk),x_position,y_position,z_position,result)
-
-
-        return jsonify({'message': 'Image predict result : ' + result,'result' : result})
+        return jsonify({'message': 'Image predict result : ' + predicted_class, 'result': str(x_position)+str(y_position)+str(z_position)})
+    
     
 # @app.route('/predict', methods=['POST'])
 # def predict_image():
@@ -722,11 +817,11 @@ def predict_image():
 #         return jsonify({'error': 'No selected file'})
 
 #     if image:
-#         if not os.path.exists(app.config['PREDICT_FOLDER']+'\\'+user_id_pk):
-#             os.makedirs(app.config['PREDICT_FOLDER']+'\\'+user_id_pk)
+#         if not os.path.exists(app.config['PREDICT_FOLDER']+'/'+user_id_pk):
+#             os.makedirs(app.config['PREDICT_FOLDER']+'/'+user_id_pk)
 #             print("Making",user_id_pk)
 #         print("None Making",user_id_pk)
-#         filename = os.path.join(app.config['PREDICT_FOLDER']+'\\'+user_id_pk, image.filename)
+#         filename = os.path.join(app.config['PREDICT_FOLDER']+'/'+user_id_pk, image.filename)
 #         image.save(filename)
 #         #loaded_model = keras.models.load_model("./ml/capstone.h5", compile=False)
 
@@ -780,6 +875,23 @@ def predict_image():
 #         return jsonify({'message': 'Image predict result : ' + result,'result' : result})
     
 
+
+
+@app.route('/get_data_by_map_id', methods=['POST'])
+def get_data_by_map_id():
+    data = request.get_json()
+    user_map_id = data.get('user_map')
+
+    # 여기서 실제 로그인 로직을 수행합니다.
+    flag,result_out=get_map_data(str(user_map_id))
+    print(result_out)
+    if(flag):
+        return jsonify({'success': True,'data': result_out})
+    else :
+        return jsonify({'success': False, 'data': "None"})
+        
+
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -790,8 +902,10 @@ def login():
 
     # 여기서 실제 로그인 로직을 수행합니다.
     if authenticate_user(str(user_id), str(password)):
+        flag,out_result=get_map_id(str(user_id))
         print("Login T")
-        return jsonify({'success': True})
+        if(flag):
+            return jsonify({'success': True, 'map_id':out_result })
     
     else:
         print("Login F")

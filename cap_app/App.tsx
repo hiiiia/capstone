@@ -22,7 +22,8 @@ import {
   TextInput,
   TouchableHighlight,
   Alert,
-  Modal
+  Modal,
+  FlatList, TouchableOpacity
 } from 'react-native';
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 import { Camera, CameraPermissionStatus, CameraDevice, PhotoFile, useCameraDevice, VideoFile } from 'react-native-vision-camera';
@@ -34,7 +35,7 @@ const App = () => {
   const [camera_state, set_camera_state] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<PhotoFile | null>(null);
 
-
+  const [user_map_id, set_user_map] = useState('None');
   const [login_state, set_login_state] = useState(false);
   const [username, setUsername] = useState(''); // 입력받은 사용자명
   const [password, setPassword] = useState(''); // 입력받은 비밀번호
@@ -42,7 +43,10 @@ const App = () => {
   const [server_address, set_server_address] = useState('192.168.0.248:5000');
   const [inputServerAddress, setInputServerAddress] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  
+
+  const [map_modal_visible, set_map_modal] = useState(false);
+  const [modalData, setModalData] = useState<Array<Array<string | number>>>([]);
+
   const handleUpdateServerAddress = () => {
     set_server_address(inputServerAddress);
     setIsModalVisible(false);
@@ -142,6 +146,62 @@ const App = () => {
     return `${year}_${month}_${day}_${hours}_${minutes}_${seconds}`;
   }
 
+
+    const get_user_map_compo = ()=> {
+      
+    const userData = {
+      user_map: user_map_id,
+    };
+
+    fetch(`http://${server_address}/get_data_by_map_id`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // 성공적으로 데이터를 받아왔을 때의 처리
+        const twoDArray = data.data;
+        //console.log('Received data:', twoDArray);
+        setModalData(twoDArray);
+        set_map_modal(true);
+        //console.log('Received data:', data.data);
+      } else {
+        // 데이터를 받아오지 못했을 때의 처리
+        console.error('Failed to fetch data:', data.data);
+      }
+    })
+    .catch(error => {
+      // 네트워크 오류 등의 예외 처리
+      console.error('Error fetching data:', error);
+    });
+
+
+  };
+
+  const handleItemPress = (index : number) => {
+
+    // 아이템이 눌렸을 때 실행할 동작 정의
+    console.log(`Button ${index + 1} Pressed `);
+  
+    // 여기에 추가적인 동작을 정의할 수 있습니다.
+    // 예를 들어, 모달을 닫거나 다른 화면으로 이동하는 등의 동작을 수행할 수 있습니다.
+    // 아래는 모달을 닫는 예시입니다.
+    set_map_modal(false);
+  
+    // 어떤 버튼이 눌렸는지에 따라 다른 동작 수행
+    if (index === 0) {
+      // 첫 번째 버튼이 눌렸을 때의 동작
+      console.log('Button 1 Pressed');
+    } else if (index === 1) {
+      // 두 번째 버튼이 눌렸을 때의 동작
+      console.log('Button 2 Pressed');
+    }
+  };
+  
 
     // 비디오 서버로 전송하는 함수
     const sendVideoToServer = async (video: VideoFile) => {
@@ -330,6 +390,13 @@ const App = () => {
           // 로그인 성공 시, login_state를 true로 변경하여 화면을 전환
           Alert.alert('로그인 성공');
           set_login_state(true);
+          
+          if(data.map_id === "No_Maps"){
+            Alert.alert("Map을 생성하세요");
+          }
+          else{
+            set_user_map(data.map_id);
+          }
         } else {
           // 로그인 실패 처리 (예: 오류 메시지 표시)
           Alert.alert('로그인 실패', data.error);
@@ -397,13 +464,13 @@ const App = () => {
             style={styles.login_summit_button}
             onPress={handleLogin}
           >
-            <Text style={styles.login_summit_button_text}>Login</Text>
+            <Text style={styles.login_summit_button_text}>로그인</Text>
           </TouchableHighlight>
           <TouchableHighlight
             style={styles.signup_button}
             onPress={handleSignup}
           >
-            <Text style={styles.signup_button_text}>Sign Up</Text>
+            <Text style={styles.signup_button_text}>가입</Text>
           </TouchableHighlight>
           
 
@@ -413,7 +480,7 @@ const App = () => {
               onPress={() => setIsModalVisible(true)}
               disabled={login_state}
             >
-              <Text style={styles.updateServerButtonText}>Update Server</Text>
+              <Text style={styles.updateServerButtonText}>서버 주소 변경</Text>
             </TouchableHighlight>
           </View>
 
@@ -454,13 +521,51 @@ const App = () => {
             video={true}
             // photo={true}
           />
+         
+         <Modal
+  visible={map_modal_visible}
+  animationType="slide"
+  transparent={false}
+  onRequestClose={() => set_map_modal(false)}
+>
+  <View style={styles.modalContainer}>
+    {/* 모달의 헤더 등 추가 UI */}
+    <Text style={styles.modalHeaderText}>저장된 물체의 위치 & 종류</Text>
+
+    {/* FlatList를 사용하여 데이터 리스트 표시 */}
+    <FlatList
+  data={modalData}
+  keyExtractor={(item, index) => index.toString()}
+  renderItem={({ item, index }) => (
+    <TouchableOpacity
+      style={styles.itemContainer}
+      onPress={() => handleItemPress(index)}
+    >
+      <Text>Number: {item[0]}</Text>
+      <Text>X: {item[1]}</Text>
+      <Text>Y: {item[2]}</Text>
+      <Text>Z: {item[3]}</Text>
+      <Text>Label: {item[4]}</Text>
+    </TouchableOpacity>
+  )}
+/>
+
+
+    {/* 모달 닫기 버튼 */}
+    <TouchableOpacity onPress={() => set_map_modal(false)}>
+      <Text style={styles.closeButton}>Close</Text>
+    </TouchableOpacity>
+  </View>
+</Modal>
+
           <Text style={styles.sectionTitle}>state: {camera_state}</Text>
-          <Button title="Recode Video" onPress={recodevideo} />
-          <Button title="Recode Predict Video" onPress={recode_predict_video} />
-          <Button title="Stop Recode Video" onPress={stop_recodevideo} color={'lightcoral'} />
+          <Button title="Map 생성" onPress={recodevideo} />
+          <Button title="물체 위치 저장" onPress={recode_predict_video} />
+          <Button title="촬영 정지" onPress={stop_recodevideo} color={'lightcoral'} />
           {/* <Button title="Capture Photo" onPress={capturePhoto} />
           <Button title="Capture Photo predict" onPress={capturePhoto_to_predict} /> */}
-          <Text>Server connect : {`${connneting_state}`} Login ID : {`${username}`}</Text>
+          <Button title={"생성된 Map : "+user_map_id} onPress={get_user_map_compo} disabled={user_map_id === "None"} color={'gray'} />
+          <Text>서버상태 : {`${connneting_state}`} / ID : {`${username}`}</Text>
           {capturedPhoto && (
             <View>
               <Image source={{ uri: `file://${capturedPhoto.path}` }} style={styles.capturedImage} />
@@ -552,7 +657,7 @@ const styles = StyleSheet.create({
     color : 'black',
 
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     // Styles for the modal container
   },
@@ -564,6 +669,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 10,
     marginBottom: 10,
+  },
+  modalHeaderText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  itemContainer: {
+    marginBottom: 20,
+  },
+  closeButton: {
+    backgroundColor : 'lightcoral',
+    fontSize: 16,
+    color: 'white',
+    marginTop: 20,
   },
 });
 
