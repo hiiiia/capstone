@@ -283,6 +283,7 @@ const App = () => {
               // Video successfully sent to the server
               console.log("Send");
               set_connect_state("send");
+              
             } else {
               // Error occurred during the transmission
               console.log("Send Error");
