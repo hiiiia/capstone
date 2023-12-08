@@ -10,6 +10,7 @@ import numpy as np
 import cv2
 
 global user_id_pk
+original_dir = os.getcwd()
 
 host = "localhost"
 user = "root"
@@ -17,7 +18,7 @@ password = "1234"
 database = "capstone_s"
 table_name = "users"
 
-original_dir = os.getcwd()
+
 def insert_user(user_id, user_password):
     # MySQL 서버 정보
     try:
@@ -266,6 +267,90 @@ def predcit_map_location(user_id,pos_x,pos_y,pos_z,label):
             connection.close()
             print("MySQL 연결이 닫혔습니다.")
 
+
+def get_map_id(user_id):
+    # MySQL 서버 정보
+    try:
+        # MySQL 데이터베이스에 연결
+        connection = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+
+        if connection.is_connected():
+            print("MySQL 데이터베이스에 연결되었습니다.")
+
+            # MySQL 커서 생성
+            cursor = connection.cursor()
+
+            table_name = "user_maps"
+            # 중복 확인을 위해 사용자 ID 검색
+            query = f"SELECT user_name,map_id FROM {table_name} WHERE user_name = %s"
+            values = (user_id,)
+            cursor.execute(query, values)
+            existing_user = cursor.fetchone()
+
+            if existing_user:
+                # Map id find
+                _, before_map_id = existing_user
+                print(f"User Name: {user_id}, Map ID: {before_map_id}")
+
+
+                return True, before_map_id
+            
+            # 사용자 정보 삽입
+            else :
+                return True, "No_Maps"
+
+    except Exception as e:
+        print(f"MySQL 연결 또는 쿼리 오류: {e}")
+        return False
+
+    finally:
+        # 연결과 커서 닫기
+        if 'connection' in locals() and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL 연결이 닫혔습니다.")
+
+
+def get_map_data(user_map_id):
+    # MySQL 서버 정보
+    try:
+        # MySQL 데이터베이스에 연결
+        connection = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+
+        if connection.is_connected():
+            print("MySQL 데이터베이스에 연결되었습니다.")
+
+            # MySQL 커서 생성
+            cursor = connection.cursor()
+
+            # 중복 확인을 위해 사용자 ID 검색
+            query = f"SELECT * FROM {user_map_id}"
+            cursor.execute(query)
+            result = [list(row) for row in cursor.fetchall()]
+
+            return True, result
+
+    except Exception as e:
+        print(f"MySQL 연결 또는 쿼리 오류: {e}")
+        return False, "오류"
+
+    finally:
+        # 연결과 커서 닫기
+        if 'connection' in locals() and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL 연결이 닫혔습니다.")
+
 app = Flask(__name__)
 
 # 이미지를 저장할 디렉토리
@@ -419,7 +504,7 @@ def upload_video():
         # =====================================================
         # =====================================================
         # =====================================================
-        #----------------------------------------------------------------------------------------------------------------------------------
+        
         # Command execution
         system_t_path = "/home/wodbs/Dev/ORB_SLAM3/src/System_t.cc"
        # 파일이 존재하면 실행
@@ -432,7 +517,7 @@ def upload_video():
 # 실행할 명령을 정의
 
         command = [
-        "/home/wodbs/Dev/ORB_SLAM3/Examples/Monocular/mono_euroc",
+        "/home/wodbs/Dev/ORB_SLAM3/Examples/Monocular/mono_euroc_train",
         "/home/wodbs/Dev/ORB_SLAM3/Vocabulary/ORBvoc.txt",
         "/home/wodbs/Dev/ORB_SLAM3/Examples/Monocular/test.yaml",
         str(output_dir),
@@ -490,7 +575,6 @@ def upload_video():
         # =====================================================
         # ===============================================s======
         # =====================================================
-       
         map_id = re.sub(r'[.]','',video_name)
         map_id_insert(str(user_id_pk), str(map_id))
 
@@ -646,6 +730,9 @@ def predict_image():
 # Display probabilities for all classes
         for i, class_name in enumerate(class_names):
             print(f"Probability for '{class_name}': {predictions[0][i]}")
+            
+
+
 
         system_t_path = "/home/wodbs/Dev/ORB_SLAM3/src/System_t.cc"
        # 파일이 존재하면 실행
@@ -718,6 +805,7 @@ def predict_image():
 
         return jsonify({'message': 'Image predict result : ' + predicted_class, 'result': str(x_position)+str(y_position)+str(z_position)})
     
+    
 # @app.route('/predict', methods=['POST'])
 # def predict_image():
 #     print(user_id_pk)
@@ -729,11 +817,11 @@ def predict_image():
 #         return jsonify({'error': 'No selected file'})
 
 #     if image:
-#         if not os.path.exists(app.config['PREDICT_FOLDER']+'\\'+user_id_pk):
-#             os.makedirs(app.config['PREDICT_FOLDER']+'\\'+user_id_pk)
+#         if not os.path.exists(app.config['PREDICT_FOLDER']+'/'+user_id_pk):
+#             os.makedirs(app.config['PREDICT_FOLDER']+'/'+user_id_pk)
 #             print("Making",user_id_pk)
 #         print("None Making",user_id_pk)
-#         filename = os.path.join(app.config['PREDICT_FOLDER']+'\\'+user_id_pk, image.filename)
+#         filename = os.path.join(app.config['PREDICT_FOLDER']+'/'+user_id_pk, image.filename)
 #         image.save(filename)
 #         #loaded_model = keras.models.load_model("./ml/capstone.h5", compile=False)
 
@@ -787,6 +875,23 @@ def predict_image():
 #         return jsonify({'message': 'Image predict result : ' + result,'result' : result})
     
 
+
+
+@app.route('/get_data_by_map_id', methods=['POST'])
+def get_data_by_map_id():
+    data = request.get_json()
+    user_map_id = data.get('user_map')
+
+    # 여기서 실제 로그인 로직을 수행합니다.
+    flag,result_out=get_map_data(str(user_map_id))
+    print(result_out)
+    if(flag):
+        return jsonify({'success': True,'data': result_out})
+    else :
+        return jsonify({'success': False, 'data': "None"})
+        
+
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -797,8 +902,10 @@ def login():
 
     # 여기서 실제 로그인 로직을 수행합니다.
     if authenticate_user(str(user_id), str(password)):
+        flag,out_result=get_map_id(str(user_id))
         print("Login T")
-        return jsonify({'success': True})
+        if(flag):
+            return jsonify({'success': True, 'map_id':out_result })
     
     else:
         print("Login F")
@@ -821,3 +928,14 @@ def signup():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+def location():
+    with open('grid_map.txt', 'r') as file:
+    lines = file.readlines()
+    
+# 그리드 맵 변환
+    grid_map = [list(map(int, line.strip())) for line in lines]
+
+ 
+
+

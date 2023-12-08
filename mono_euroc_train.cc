@@ -37,7 +37,10 @@ int main(int argc, char **argv)
         cerr << endl << "Usage: ./mono_euroc path_to_vocabulary path_to_settings path_to_sequence_folder_1 path_to_times_file_1 (path_to_image_folder_2 path_to_times_file_2 ... path_to_image_folder_N path_to_times_file_N) (trajectory_file_name)" << endl;
         return 1;
     }
-
+float x_min = 4.0f;
+float x_max = -4.0f;
+float z_min = 4.0f;
+float z_max = 0-4.0f;
     const int num_seq = (argc-3)/2;
     cout << "num_seq = " << num_seq << endl;
     bool bFileName= (((argc-3) % 2) == 1);
@@ -143,21 +146,26 @@ int main(int argc, char **argv)
 // TrackMonocular 함수 호출
 
     Sophus::SE3f sophusPose = SLAM.TrackMonocular(im, tframe);
-Eigen::Matrix3f rotationMatrix = sophusPose.rotationMatrix();
-float yaw = std::atan2(rotationMatrix(2, 0), rotationMatrix(0, 0));
-std::cout << std::fixed << std::setprecision(1);
-// 반올림된 X, Y, Z 위치 출력
-std::cout << "Camera Rotation: yaw = " << yaw <<std::endl;
+
     // Sophus::SE3f에서 변환 벡터 추출
     Eigen::Vector3f translationVector = sophusPose.translation();
+
+        // X, Y, Z 위치 출력
 float x_rounded = std::round(translationVector.x() / 0.2) * 0.2;
 float y_rounded = std::round(translationVector.y() / 0.2) * 0.2;
 float z_rounded = std::round(translationVector.z() / 0.2) * 0.2;
+
+
+if (x_rounded < x_min) x_min = x_rounded;
+if (x_rounded > x_max) x_max = x_rounded;
+if (z_rounded < z_min) z_min = z_rounded;
+if (z_rounded > z_max) z_max = z_rounded;
 std::cout << std::fixed << std::setprecision(1);
 // 반올림된 X, Y, Z 위치 출력
 std::cout << "Camera Position: X = " << x_rounded 
           << ", Y = " << y_rounded 
           << ", Z = " << z_rounded << std::endl;
+
 
     #ifdef COMPILEDWITHC11
             std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
@@ -203,22 +211,21 @@ std::cout << "Camera Position: X = " << x_rounded
         }
 
     }
+    std::cout << std::fixed << std::setprecision(1);
+std::cout << "X_min: " << x_min << ", X-max: " << x_max << "Z_min: " << z_min << ", Z-max: " << z_max <<std::endl;
+
     // Stop all threads
     SLAM.Shutdown();
 
     // Save camera trajectory
     if (bFileName)
     {
-        const string kf_file =  "kf_" + string(argv[argc-1]) + ".txt";
-        const string f_file =  "f_" + string(argv[argc-1]) + ".txt";
-        SLAM.SaveTrajectoryEuRoC(f_file);
-        SLAM.SaveKeyFrameTrajectoryEuRoC(kf_file);
+    std::cout << std::fixed << std::setprecision(1);
+std::cout << "X_min: " << x_min << ", X-max: " << x_max << "Z_min: " << z_min << ", Z-max: " << z_max <<std::endl;
+
+     
     }
-    else
-    {
-        SLAM.SaveTrajectoryEuRoC("CameraTrajectory.txt");
-        SLAM.SaveKeyFrameTrajectoryEuRoC("KeyFrameTrajectory.txt");
-    }
+   
 
     return 0;
 }
