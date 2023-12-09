@@ -50,6 +50,10 @@ const App = () => {
   const [selectedItem, setSelectedItem] = useState(0 as number);
 
   const [loop_id,set_loop_id] = useState<null | ReturnType<typeof setTimeout>>(null);
+  const [navivation, set_naviation] = useState("")
+  
+  
+  
   const handleUpdateServerAddress = () => {
     set_server_address(inputServerAddress);
     setIsModalVisible(false);
@@ -362,7 +366,12 @@ const App = () => {
         
             if (response.ok) {
               // Video and number successfully sent to the server
+              const result = await response.json(); // 수정된 부분
+              //console.log(result.message); // 서버에서 받은 데이터 출력
+              console.log(result.result); // 서버에서 받은 데이터 출력
+              
               set_connect_state("Finding..");
+              set_naviation(result.result as string);
             } else {
               // Error occurred during the transmission
               console.log("Send Error");

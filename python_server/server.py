@@ -863,7 +863,6 @@ def predict_image():
 
         return jsonify({'message': 'Image predict result : ' + predicted_class, 'result': str(x_position)+str(y_position)+str(z_position)})
     
-
 @app.route('/find_path', methods=['POST'])
 def find_path_image():
     print(user_id_pk)
@@ -995,12 +994,12 @@ def find_path_image():
             file_contents = output_file_handle.read()
             # Use regular expressions to extract values
             match = re.search(r"Camera Position: X = (\S+), Y = (\S+), Z = (\S+)", file_contents)
-
+            match1 = re.search(r"Camera Rotation: yaw = (\S+)", file_contents)#변경 재윤
             # Check if the pattern was found
             if match:
-                x_value = match.group(1)
-                y_value = match.group(2)
-                z_value = match.group(3)
+                x_value =float(match.group(1)) #변경 재윤
+                y_value =float(match.group(2))
+                z_value =float(match.group(3))
 
                 x_position = x_value
                 y_position = y_value
@@ -1010,6 +1009,11 @@ def find_path_image():
             else:
                 print("Pattern not found in the file.")
 
+            if match1:
+                yaw =float(match.group(1))
+                print(f"yaw: {yaw}")
+            else:
+                print("yaw 값을 찾을 수 없습니다.")
 
 
 
@@ -1028,7 +1032,7 @@ def find_path_image():
                 goal_pos = goal_pos_t
         print("ID",select_idx)
         print(x_position,y_position,z_position) # 현재 x,y,z
-        print("Goal",goal_pos[1:5]) # Goal[x,y,z]
+        print("Goal",goal_pos) # Goal[x,y,z]
         print(grid_path) # TXT파일
 
 
@@ -1038,22 +1042,54 @@ def find_path_image():
 #======================================
 #======================================
 
-        start = (0, 0)  # 출발지 (x, z)
-        goal = (0, 2)   # 도착지 (x, z)
+      
 
-
-
-
-
-
-
-
-
-
-
-
-        return jsonify({'message': 'Image predict result : ' , 'result': str(x_position)+str(y_position)+str(z_position)})
+    with open(grid_path, 'r') as file:
+        mins = file.readline()
+        lines = file.readlines()
     
+    grid_map = [list(map(int, line.strip())) for line in lines]
+    match = re.search(r"x_min: (\S+), z_min: (\S+)", mins)
+
+    if match:
+        x_min = float(match.group(1))
+        z_min = float(match.group(2))
+        print(f"x_min: {x_min}, z_min: {z_min}")
+    else:
+        print("x_min과 z_min을 찾을 수 없습니다.")
+    start = ((z_position-z_min)/0.5, (x_position-x_min)/0.5)
+    goal = ((goal_pos[2]-z_min)/0.5, (goal_pos[0]-x_min)/0.5)
+    path = a_star_search(grid_map, start, goal)
+    
+    x_next = path[1][0]*0.5+x_min
+    z_next = path[1][1]*0.5+z_min 
+
+
+    direction_to_next = atan2(z_next - z_position, x_next - x_position)
+    
+    angle_difference = direction_to_next - yaw
+
+    output_string = ""
+    if abs(angle_difference) < math.pi / 4:
+        output_string = "East"
+        print("Go East")
+    elif abs(angle_difference) > 3 * math.pi / 4:
+        output_string = "West"
+        print("Go West")
+    elif angle_difference > 0:
+        output_string = "North"
+        print("Go North")
+    else:
+        output_string = "South"
+        print("Go South")
+
+
+
+
+
+
+        return jsonify({'message': 'Image predict result : ' , 'result': output_string})
+
 
 
 
