@@ -663,8 +663,24 @@ const App = () => {
           {capturedPhoto && (
             <View>
               <Image source={{ uri: `file://${capturedPhoto.path}` }} style={styles.capturedImage} />
+              
             </View>
           )}
+          {navivation === "East" ? (
+        <Image source={require('./assets/right.png')} style={styles.arrow} />
+      ) : (<></>)}
+
+{navivation === "West" ? (
+        <Image source={require('./assets/left.png')} style={styles.arrow} />
+      ) : (<></>)}
+
+{navivation === "North" ? (
+        <Image source={require('./assets/up.png')} style={styles.arrow} />
+      ) : (<></>)}
+
+{navivation === "South" ? (
+        <Image source={require('./assets/down.png')} style={styles.arrow} />
+      ) : (<></>)}
         </>
       )}
     </View>
@@ -782,6 +798,13 @@ const styles = StyleSheet.create({
   Modal_submit : {
     backgroundColor: 'blue' ,
      color : 'white'
+  },
+  arrow : {
+    position :'relative',
+    top : '50%',
+    left : '50%',
+    width : 100,
+    height : 100
   }
 });
 
