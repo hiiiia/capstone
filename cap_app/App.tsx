@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 import { Camera, CameraPermissionStatus, CameraDevice, PhotoFile, useCameraDevice, VideoFile } from 'react-native-vision-camera';
+import { Colors } from 'react-native/Libraries/NewAppScreen';
 
 const App = () => {
   const device = useCameraDevice('back');
@@ -46,7 +47,9 @@ const App = () => {
 
   const [map_modal_visible, set_map_modal] = useState(false);
   const [modalData, setModalData] = useState<Array<Array<string | number>>>([]);
+  const [selectedItem, setSelectedItem] = useState(0 as number);
 
+  const [loop_id,set_loop_id] = useState<null | ReturnType<typeof setTimeout>>(null);
   const handleUpdateServerAddress = () => {
     set_server_address(inputServerAddress);
     setIsModalVisible(false);
@@ -95,6 +98,22 @@ const App = () => {
       };
   
       
+        // 비디오 녹화
+  const find_current_pos = async () => {
+    if (camera.current) {
+      try {
+        camera.current.startRecording({
+          //videoCodec: 'h265',
+          //videoBitRate: 'high',
+          onRecordingFinished: (video) => { find_path_send_VideoToServer(video) },
+          onRecordingError: (error) => console.error(error),
+        });
+      } catch (error) {
+        console.error("Error starting video recording:", error);
+      }
+    }
+  };
+
   const stop_recodevideo = async () => {
     if (camera.current) {
       const video = await camera.current.stopRecording();
@@ -184,25 +203,39 @@ const App = () => {
 
   const handleItemPress = (index : number) => {
 
-    // 아이템이 눌렸을 때 실행할 동작 정의
-    console.log(`Button ${index + 1} Pressed `);
-  
-    // 여기에 추가적인 동작을 정의할 수 있습니다.
-    // 예를 들어, 모달을 닫거나 다른 화면으로 이동하는 등의 동작을 수행할 수 있습니다.
-    // 아래는 모달을 닫는 예시입니다.
-    set_map_modal(false);
-  
-    // 어떤 버튼이 눌렸는지에 따라 다른 동작 수행
-    if (index === 0) {
-      // 첫 번째 버튼이 눌렸을 때의 동작
-      console.log('Button 1 Pressed');
-    } else if (index === 1) {
-      // 두 번째 버튼이 눌렸을 때의 동작
-      console.log('Button 2 Pressed');
-    }
+    setSelectedItem(index+1);
   };
   
+  const handleItemSubmit = () => {
+  
+    set_map_modal(false);
+    
+    // Execute find_object every 3 seconds
+    const intervalId = setInterval(() => {
+      find_object();
+    }, 4000);
 
+    set_loop_id(intervalId);
+    // Stop the interval after 12 seconds(12,000) (3 executions)
+    setTimeout(() => {
+      clearInterval(intervalId);
+    }, 120000); // 120000 -> 120 second
+  };
+
+  const handel_stop_loop = () =>{
+    clearInterval(loop_id as ReturnType<typeof setTimeout>);
+    set_loop_id(null);
+    set_connect_state("Stop Finding");
+  }
+  
+  const find_object = () => {
+    find_current_pos();
+    setTimeout(() => {
+      stop_recodevideo();
+    }, 2000);
+  };
+
+  
     // 비디오 서버로 전송하는 함수
     const sendVideoToServer = async (video: VideoFile) => {
       const path = video.path;
@@ -295,6 +328,54 @@ const App = () => {
             // Network error or other exceptions
           }
         };
+
+        const find_path_send_VideoToServer = async (video: VideoFile) => {
+          const path = video.path;
+        
+          try {
+            // Save the video file using CameraRoll
+            await CameraRoll.save(`file://${path}`, {
+              type: 'video',
+            });
+        
+            const formData = new FormData();
+        
+            // Append the video file to the formData
+            formData.append('video', {
+              uri: `file://${path}`,
+              type: 'video/mp4',
+              name: `${getCurrentTimeFormatted()}.mp4`,
+            });
+        
+            // Append the 'number' value to the formData
+            formData.append('number', selectedItem);
+        
+            const response = await fetch(`http://${server_address}/find_path`, {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+        
+            set_connect_state("NNNNN");
+        
+            if (response.ok) {
+              // Video and number successfully sent to the server
+              set_connect_state("Finding..");
+            } else {
+              // Error occurred during the transmission
+              console.log("Send Error");
+              set_connect_state("Send Error");
+            }
+          } catch (error) {
+            console.log(error);
+            set_connect_state(`${error}`);
+            // Network error or other exceptions
+          }
+        };
+        
+
   // 이미지를 서버로 전송하는 함수
   const sendImageToServer = async (image: PhotoFile) => {
     const formData = new FormData();
@@ -532,14 +613,16 @@ const App = () => {
   <View style={styles.modalContainer}>
     {/* 모달의 헤더 등 추가 UI */}
     <Text style={styles.modalHeaderText}>저장된 물체의 위치 & 종류</Text>
-
+    <TouchableOpacity style={styles.Modal_submit} onPress={() => handleItemSubmit()}>
+      <Text style = {{color : 'white'}}>선택</Text>
+    </TouchableOpacity>
     {/* FlatList를 사용하여 데이터 리스트 표시 */}
     <FlatList
   data={modalData}
   keyExtractor={(item, index) => index.toString()}
   renderItem={({ item, index }) => (
     <TouchableOpacity
-      style={styles.itemContainer}
+    style={[styles.itemContainer, { backgroundColor: selectedItem === index ? 'lightblue' : 'lightgray' }]}
       onPress={() => handleItemPress(index)}
     >
       <Text>Number: {item[0]}</Text>
@@ -553,7 +636,7 @@ const App = () => {
 
 
     {/* 모달 닫기 버튼 */}
-    <TouchableOpacity onPress={() => set_map_modal(false)}>
+    <TouchableOpacity onPress={() => {set_map_modal(false)}}>
       <Text style={styles.closeButton}>Close</Text>
     </TouchableOpacity>
   </View>
@@ -566,6 +649,7 @@ const App = () => {
           {/* <Button title="Capture Photo" onPress={capturePhoto} />
           <Button title="Capture Photo predict" onPress={capturePhoto_to_predict} /> */}
           <Button title={"생성된 Map : "+user_map_id} onPress={get_user_map_compo} disabled={user_map_id === "None"} color={'gray'} />
+          <Button title={"추적 중지"} onPress={handel_stop_loop} disabled={loop_id === null} color={'lightcoral'} />
           <Text>서버상태 : {`${connneting_state}`} / ID : {`${username}`}</Text>
           {capturedPhoto && (
             <View>
@@ -678,6 +762,7 @@ const styles = StyleSheet.create({
   },
   itemContainer: {
     marginBottom: 20,
+    backgroundColor : 'lightgray'
   },
   closeButton: {
     backgroundColor : 'lightcoral',
@@ -685,6 +770,10 @@ const styles = StyleSheet.create({
     color: 'white',
     marginTop: 20,
   },
+  Modal_submit : {
+    backgroundColor: 'blue' ,
+     color : 'white'
+  }
 });
 
 export default App;
