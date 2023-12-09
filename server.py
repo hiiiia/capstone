@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 import cv2
 import math
+import heapq
 global user_id_pk
 original_dir = os.getcwd()
 
@@ -18,6 +19,51 @@ password = "1234"
 database = "capstone_s"
 table_name = "users"
 
+def heuristic(a, b):
+    """맨해튼 거리를 휴리스틱 함수로 사용"""
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def a_star_search(grid, start, goal):
+    """A* 알고리즘으로 경로 찾기"""
+    neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # 상, 하, 좌, 우 이동
+    close_set = set()
+    came_from = {}
+    gscore = {start: 0}
+    fscore = {start: heuristic(start, goal)}
+    oheap = []
+
+    heapq.heappush(oheap, (fscore[start], start))
+    
+    while oheap:
+        current = heapq.heappop(oheap)[1]
+
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            return path[::-1]
+
+        close_set.add(current)
+        for i, j in neighbors:
+            neighbor = current[0] + i, current[1] + j            
+            tentative_g_score = gscore[current] + heuristic(current, neighbor)
+            if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]):
+                if grid[neighbor[0]][neighbor[1]] != 1:
+                    continue
+            else:
+                continue
+            
+            if neighbor in close_set and tentative_g_score >= gscore.get(neighbor, 0):
+                continue
+            
+            if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1]for i in oheap]:
+                came_from[neighbor] = current
+                gscore[neighbor] = tentative_g_score
+                fscore[neighbor] = tentative_g_score + heuristic(neighbor, goal)
+                heapq.heappush(oheap, (fscore[neighbor], neighbor))
+                
+    return False
 
 def insert_user(user_id, user_password):
     # MySQL 서버 정보
@@ -550,17 +596,17 @@ def upload_video():
 
             # Check if the pattern was found
             if match:
-                x_min = match.group(1)
-                x_max = match.group(2)
-                z_min = match.group(3)
-                z_max = match.group(4)
+                x_min = float(match.group(1))
+                x_max = float(match.group(2))
+                z_min = float(match.group(3))
+                z_max = float(match.group(4))
 
                 # Print or use the extracted values
                 print(f"Extracted values: x_min = {x_min}, x_max = {x_max}, z_min = {z_min}, z_max = {z_max}")
             else:
                 print("Pattern not found in the file.")
-        x_cells = int((x_max - x_min) / 0.2) + 2
-        z_cells = int((z_max - z_min) / 0.2) + 2# 0 하나씩 더 넣음 혹시모를 경로 초과 대비
+        x_cells = int((x_max - x_min) / 0.5) + 2
+        z_cells = int((z_max - z_min) / 0.5) + 2# 0 하나씩 더 넣음 혹시모를 경로 초과 대비
         
         grid_map = [[0 for _ in range(x_cells)] for _ in range(z_cells)]
         
@@ -587,8 +633,8 @@ def upload_video():
             # Check if the pattern was found
             for match in matches:
                  x_value, y_value, z_value = map(float, match)  # 문자열을 실수로 변환
-                 x_index = int((x_value - x_min) / 0.2)
-                 z_index = int((z_value - z_min) / 0.2)
+                 x_index = int((x_value - x_min) / 0.5)
+                 z_index = int((z_value - z_min) / 0.5)
                  grid_map[z_index][x_index] = 1
         # 그리드 맵 출력
         for row in grid_map:
@@ -598,7 +644,12 @@ def upload_video():
         with open('grid_map.txt', 'w') as file:
             file.write(f"x_min: {x_min}, z_min: {z_min}\n")
             file.write(grid_map_string)
-
+            
+            
+        start = (0, 0)  # 출발지 (x, z)
+        goal = (0, 2)   # 도착지 (x, z)
+        path = a_star_search(grid_map, start, goal)
+        print(path)
 
         # =====================================================
         # =====================================================
@@ -962,51 +1013,8 @@ if __name__ == '__main__':
 
 import heapq
 
-def heuristic(a, b):
-    """맨해튼 거리를 휴리스틱 함수로 사용"""
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-def a_star_search(grid, start, goal):
-    """A* 알고리즘으로 경로 찾기"""
-    neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # 상, 하, 좌, 우 이동
-    close_set = set()
-    came_from = {}
-    gscore = {start: 0}
-    fscore = {start: heuristic(start, goal)}
-    oheap = []
 
-    heapq.heappush(oheap, (fscore[start], start))
-    
-    while oheap:
-        current = heapq.heappop(oheap)[1]
-
-        if current == goal:
-            path = []
-            while current in came_from:
-                path.append(current)
-                current = came_from[current]
-            return path[::-1]
-
-        close_set.add(current)
-        for i, j in neighbors:
-            neighbor = current[0] + i, current[1] + j            
-            tentative_g_score = gscore[current] + heuristic(current, neighbor)
-            if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]):
-                if grid[neighbor[0]][neighbor[1]] != 1:
-                    continue
-            else:
-                continue
-            
-            if neighbor in close_set and tentative_g_score >= gscore.get(neighbor, 0):
-                continue
-            
-            if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1]for i in oheap]:
-                came_from[neighbor] = current
-                gscore[neighbor] = tentative_g_score
-                fscore[neighbor] = tentative_g_score + heuristic(neighbor, goal)
-                heapq.heappush(oheap, (fscore[neighbor], neighbor))
-                
-    return False
 
 # 예시 그리드 맵 (1은 이동 가능한 길)
 
@@ -1032,14 +1040,14 @@ def location():
         print(f"x_min: {x_min}, z_min: {z_min}")
     else:
         print("x_min과 z_min을 찾을 수 없습니다.")
-    #현재 (x 값 -x_min)/0.2 
+    #현재 (x 값 -x_min)/0.5 
     start = (0, 0)  # 출발지 (x, y)
-    goal = (4, 4)   # 도착지 (x, y)
+    goal = (-2, 0)   # 도착지 (x, y)
     path = a_star_search(grid_map, start, goal)
     
 
-    x_next = path[1][0]*0.2+x_min
-    z_next = path[1][1]*0.2+z_min 
+    x_next = path[1][0]*0.5+x_min
+    z_next = path[1][1]*0.5+z_min 
 
 
     direction_to_next = atan2(z_next - z_current, x_next - x_current)
