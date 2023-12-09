@@ -217,7 +217,7 @@ const App = () => {
     // Execute find_object every 3 seconds
     const intervalId = setInterval(() => {
       find_object();
-    }, 4000);
+    }, 7000);
 
     set_loop_id(intervalId);
     // Stop the interval after 12 seconds(12,000) (3 executions)
