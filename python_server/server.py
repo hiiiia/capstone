@@ -10,6 +10,7 @@ import numpy as np
 import cv2
 import math as math
 from math import atan2
+import heapq
 
 global user_id_pk
 original_dir = os.getcwd()
@@ -19,6 +20,100 @@ user = "root"
 password = "root"
 database = "capstone_s"
 table_name = "users"
+
+
+
+
+def heuristic(a, b):
+    """맨해튼 거리를 휴리스틱 함수로 사용"""
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def a_star_search(grid, start, goal):
+    """A* 알고리즘으로 경로 찾기"""
+    neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # 상, 하, 좌, 우 이동
+    close_set = set()
+    came_from = {}
+    gscore = {start: 0}
+    fscore = {start: heuristic(start, goal)}
+    oheap = []
+
+    heapq.heappush(oheap, (fscore[start], start))
+    
+    while oheap:
+        current = heapq.heappop(oheap)[1]
+
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            return path[::-1]
+
+        close_set.add(current)
+        for i, j in neighbors:
+            neighbor = current[0] + i, current[1] + j            
+            tentative_g_score = gscore[current] + heuristic(current, neighbor)
+            if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]):
+                if grid[neighbor[0]][neighbor[1]] != 1:
+                    continue
+            else:
+                continue
+            
+            if neighbor in close_set and tentative_g_score >= gscore.get(neighbor, 0):
+                continue
+            
+            if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1]for i in oheap]:
+                came_from[neighbor] = current
+                gscore[neighbor] = tentative_g_score
+                fscore[neighbor] = tentative_g_score + heuristic(neighbor, goal)
+                heapq.heappush(oheap, (fscore[neighbor], neighbor))
+                
+    return False
+
+
+def location(file_path,x_current, z_current):
+    with open(file_path, 'r') as file:
+        mins = file.readline()
+        lines = file.readlines()
+    
+# 그리드 맵 변환
+    grid_map = [list(map(int, line.strip())) for line in lines]
+    match = re.search(r"x_min: ([\d\.\-]+), z_min: ([\d\.\-]+)", mins)
+
+    if match:
+        x_min = float(match.group(1))
+        z_min = float(match.group(2))
+        print(f"x_min: {x_min}, z_min: {z_min}")
+    else:
+        print("x_min과 z_min을 찾을 수 없습니다.")
+    #현재 (x 값 -x_min)/0.5 
+    start = (0, 0)  # 출발지 (x, y)
+    goal = (-2, 0)   # 도착지 (x, y)
+    path = a_star_search(grid_map, start, goal)
+    
+
+    x_next = path[1][0]*0.5+x_min
+    z_next = path[1][1]*0.5+z_min 
+
+
+    direction_to_next = atan2(z_next - z_current, x_next - x_current)
+
+#추측하고 읽어야함
+    yaw = ...; 
+
+
+    angle_difference = direction_to_next - yaw
+
+    if abs(angle_difference) < math.pi / 4:
+        print("Go East")
+    elif abs(angle_difference) > 3 * math.pi / 4:
+        print("Go West")
+    elif angle_difference > 0:
+        print("Go North")
+    else:
+        print("Go South")
+
+
 
 
 def insert_user(user_id, user_password):
@@ -1029,7 +1124,7 @@ def find_path_image():
             grid_path = os.path.join(app.config['UPLOAD_VIDEO_FOLDER'], user_id_pk, out_result+ '.txt')
             flag_1,goal_pos_t=get_map_selected_data(out_result,select_idx)
             if(flag_1):
-                goal_pos = goal_pos_t
+                goal_pos = goal_pos_t[1:4]
         print("ID",select_idx)
         print(x_position,y_position,z_position) # 현재 x,y,z
         print("Goal",goal_pos) # Goal[x,y,z]
@@ -1162,95 +1257,3 @@ if __name__ == '__main__':
 
 
 
-
-import heapq
-
-
-def heuristic(a, b):
-    """맨해튼 거리를 휴리스틱 함수로 사용"""
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-def a_star_search(grid, start, goal):
-    """A* 알고리즘으로 경로 찾기"""
-    neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # 상, 하, 좌, 우 이동
-    close_set = set()
-    came_from = {}
-    gscore = {start: 0}
-    fscore = {start: heuristic(start, goal)}
-    oheap = []
-
-    heapq.heappush(oheap, (fscore[start], start))
-    
-    while oheap:
-        current = heapq.heappop(oheap)[1]
-
-        if current == goal:
-            path = []
-            while current in came_from:
-                path.append(current)
-                current = came_from[current]
-            return path[::-1]
-
-        close_set.add(current)
-        for i, j in neighbors:
-            neighbor = current[0] + i, current[1] + j            
-            tentative_g_score = gscore[current] + heuristic(current, neighbor)
-            if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]):
-                if grid[neighbor[0]][neighbor[1]] != 1:
-                    continue
-            else:
-                continue
-            
-            if neighbor in close_set and tentative_g_score >= gscore.get(neighbor, 0):
-                continue
-            
-            if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1]for i in oheap]:
-                came_from[neighbor] = current
-                gscore[neighbor] = tentative_g_score
-                fscore[neighbor] = tentative_g_score + heuristic(neighbor, goal)
-                heapq.heappush(oheap, (fscore[neighbor], neighbor))
-                
-    return False
-
-
-def location(file_path,x_current, z_current):
-    with open(file_path, 'r') as file:
-        mins = file.readline()
-        lines = file.readlines()
-    
-# 그리드 맵 변환
-    grid_map = [list(map(int, line.strip())) for line in lines]
-    match = re.search(r"x_min: ([\d\.\-]+), z_min: ([\d\.\-]+)", mins)
-
-    if match:
-        x_min = float(match.group(1))
-        z_min = float(match.group(2))
-        print(f"x_min: {x_min}, z_min: {z_min}")
-    else:
-        print("x_min과 z_min을 찾을 수 없습니다.")
-    #현재 (x 값 -x_min)/0.5 
-    start = (0, 0)  # 출발지 (x, y)
-    goal = (-2, 0)   # 도착지 (x, y)
-    path = a_star_search(grid_map, start, goal)
-    
-
-    x_next = path[1][0]*0.5+x_min
-    z_next = path[1][1]*0.5+z_min 
-
-
-    direction_to_next = atan2(z_next - z_current, x_next - x_current)
-
-#추측하고 읽어야함
-    yaw = ...; 
-
-
-    angle_difference = direction_to_next - yaw
-
-    if abs(angle_difference) < math.pi / 4:
-        print("Go East")
-    elif abs(angle_difference) > 3 * math.pi / 4:
-        print("Go West")
-    elif angle_difference > 0:
-        print("Go North")
-    else:
-        print("Go South")

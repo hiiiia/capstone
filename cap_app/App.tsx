@@ -207,7 +207,7 @@ const App = () => {
 
   const handleItemPress = (index : number) => {
 
-    setSelectedItem(index+1);
+    setSelectedItem(index);
   };
   
   const handleItemSubmit = () => {
@@ -352,7 +352,7 @@ const App = () => {
             });
         
             // Append the 'number' value to the formData
-            formData.append('number', selectedItem);
+            formData.append('number', selectedItem+1);
         
             const response = await fetch(`http://${server_address}/find_path`, {
               method: 'POST',
@@ -659,7 +659,7 @@ const App = () => {
           <Button title="Capture Photo predict" onPress={capturePhoto_to_predict} /> */}
           <Button title={"생성된 Map : "+user_map_id} onPress={get_user_map_compo} disabled={user_map_id === "None"} color={'gray'} />
           <Button title={"추적 중지"} onPress={handel_stop_loop} disabled={loop_id === null} color={'lightcoral'} />
-          <Text>서버상태 : {`${connneting_state}`} / ID : {`${username}`}</Text>
+          <Text>서버상태 : {`${connneting_state} / ${navivation}`} / ID : {`${username}`}</Text>
           {capturedPhoto && (
             <View>
               <Image source={{ uri: `file://${capturedPhoto.path}` }} style={styles.capturedImage} />
