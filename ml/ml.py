@@ -2,7 +2,6 @@ from tensorflow import keras
 from keras.applications.inception_v3 import preprocess_input
 from PIL import Image
 import numpy as np
-
 # 저장한 모델 불러오기
 loaded_model = keras.models.load_model("./ml/capstone.h5", compile=False)
 

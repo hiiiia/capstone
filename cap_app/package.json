@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-camera-roll/camera-roll": "^7.2.0",
     "react": "18.2.0",
     "react-native": "0.72.7",
     "react-native-vision-camera": "^3.6.10"
