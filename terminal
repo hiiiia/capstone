@@ -1,0 +1,6 @@
+./Examples/Monocular/mono_euroc ./Vocabulary/ORBvoc.txt ./Examples/Monocular/test.yaml ~/test/frames ~/test/frames/timestamps.txt test
+
+System.SaveAtlasToFile: "./example"
+
+  System.LoadAtlasFromFile: "./example"
+  
